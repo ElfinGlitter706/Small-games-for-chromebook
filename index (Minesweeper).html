@@ -1,0 +1,2341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Minesweeper</title>
+
+<style>
+
+/* =========================
+   BASIC PAGE
+========================= */
+
+body {
+    margin: 0;
+    min-height: 100vh;
+
+    background: #202124;
+
+    font-family: Arial, sans-serif;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: 20px;
+}
+
+.hidden {
+    display: none;
+}
+
+
+/* =========================
+   MENU
+========================= */
+
+.menu {
+
+    width: 600px;
+    max-width: 95%;
+
+    background: #c0c0c0;
+
+    color: black;
+
+    padding: 25px;
+
+    border: 5px solid #808080;
+
+    box-shadow:
+        inset 3px 3px white,
+        inset -3px -3px #404040;
+
+}
+
+.menu h1 {
+
+    text-align: center;
+
+    margin-top: 0;
+
+    font-size: 38px;
+
+}
+
+
+/* =========================
+   NORMAL / TIMED
+========================= */
+
+.mode-title {
+
+    text-align: center;
+
+    font-size: 18px;
+
+    font-weight: bold;
+
+    margin-bottom: 8px;
+
+}
+
+.mode-buttons {
+
+    display: flex;
+
+    width: 100%;
+
+    margin-bottom: 20px;
+
+}
+
+.mode-button {
+
+    flex: 1;
+
+    padding: 15px;
+
+    font-size: 20px;
+
+    font-weight: bold;
+
+    border: 3px solid #808080;
+
+    background: #d0d0d0;
+
+    cursor: pointer;
+
+}
+
+.mode-button.selected {
+
+    background: #333;
+
+    color: white;
+
+}
+
+.mode-description {
+
+    text-align: center;
+
+    margin-bottom: 20px;
+
+    font-size: 14px;
+
+}
+
+
+/* =========================
+   DIFFICULTIES
+========================= */
+
+.difficulties {
+
+    display: grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap: 12px;
+
+}
+
+.difficulty {
+
+    padding: 18px 10px;
+
+    background: #d0d0d0;
+
+    border: 3px solid #808080;
+
+    cursor: pointer;
+
+    font-size: 20px;
+
+    font-weight: bold;
+
+    box-shadow:
+        inset 2px 2px white,
+        inset -2px -2px #404040;
+
+}
+
+.difficulty:hover {
+
+    background: #e0e0e0;
+
+}
+
+.difficulty small {
+
+    display: block;
+
+    font-size: 13px;
+
+    margin-top: 6px;
+
+    font-weight: normal;
+
+}
+
+
+/* =========================
+   CUSTOM
+========================= */
+
+.custom {
+
+    margin-top: 20px;
+
+    padding: 15px;
+
+    background: #bdbdbd;
+
+    border: 3px solid #808080;
+
+}
+
+.custom h2 {
+
+    text-align: center;
+
+    margin-top: 0;
+
+}
+
+.custom-fields {
+
+    display: grid;
+
+    grid-template-columns:
+        1fr 1fr 1fr;
+
+    gap: 10px;
+
+}
+
+.custom-fields label {
+
+    text-align: center;
+
+    font-weight: bold;
+
+}
+
+.custom-fields input {
+
+    width: 100%;
+
+    padding: 8px;
+
+    margin-top: 5px;
+
+    font-size: 16px;
+
+}
+
+.custom-start {
+
+    width: 100%;
+
+    margin-top: 12px;
+
+    padding: 12px;
+
+    font-size: 17px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+}
+
+.info {
+
+    text-align: center;
+
+    margin-top: 20px;
+
+    font-size: 14px;
+
+}
+
+
+/* =========================
+   GAME
+========================= */
+
+.game {
+
+    max-width: 95vw;
+
+    max-height: 95vh;
+
+    overflow: auto;
+
+    background: #c0c0c0;
+
+    padding: 15px;
+
+    border: 5px solid #808080;
+
+    box-shadow:
+        inset 3px 3px white,
+        inset -3px -3px #404040;
+
+}
+
+.game h1 {
+
+    color: black;
+
+    text-align: center;
+
+    margin-top: 0;
+
+}
+
+
+/* =========================
+   GAME HEADER
+========================= */
+
+.game-header {
+
+    display: flex;
+
+    justify-content:
+        space-between;
+
+    align-items: center;
+
+    background: #bdbdbd;
+
+    padding: 8px;
+
+    border: 4px solid #808080;
+
+    margin-bottom: 12px;
+
+}
+
+.counter {
+
+    background: black;
+
+    color: red;
+
+    font-family: monospace;
+
+    font-size: 23px;
+
+    padding: 5px;
+
+    min-width: 70px;
+
+    text-align: center;
+
+}
+
+.restart {
+
+    width: 45px;
+
+    height: 40px;
+
+    font-size: 23px;
+
+    cursor: pointer;
+
+}
+
+
+/* =========================
+   BOARD
+========================= */
+
+.board {
+
+    display: grid;
+
+    width: fit-content;
+
+    margin: auto;
+
+    background: #808080;
+
+    border: 4px solid #808080;
+
+}
+
+.cell {
+
+    width: 30px;
+
+    height: 30px;
+
+    background: #c0c0c0;
+
+    border: 3px solid;
+
+    border-color:
+        white
+        #707070
+        #707070
+        white;
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    font-weight: bold;
+
+    font-size: 17px;
+
+    user-select: none;
+
+    cursor: pointer;
+
+}
+
+.cell.revealed {
+
+    background: #bdbdbd;
+
+    border: 1px solid #888;
+
+}
+
+.cell.mine {
+
+    background: red;
+
+}
+
+.cell.exploded {
+
+    background: #ff0000;
+
+}
+
+.cell.flagged {
+
+    color: red;
+
+}
+
+
+/* NUMBER COLORS */
+
+.one {
+    color: blue;
+}
+
+.two {
+    color: green;
+}
+
+.three {
+    color: red;
+}
+
+.four {
+    color: darkblue;
+}
+
+.five {
+    color: darkred;
+}
+
+.six {
+    color: teal;
+}
+
+.seven {
+    color: black;
+}
+
+.eight {
+    color: gray;
+}
+
+
+/* =========================
+   STATUS
+========================= */
+
+.status {
+
+    text-align: center;
+
+    color: black;
+
+    font-weight: bold;
+
+    margin: 10px;
+
+    min-height: 20px;
+
+}
+
+.instructions {
+
+    color: black;
+
+    text-align: center;
+
+    font-size: 14px;
+
+}
+
+.back {
+
+    display: block;
+
+    margin: 12px auto 0;
+
+    padding: 8px 15px;
+
+    cursor: pointer;
+
+}
+
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 600px) {
+
+    .difficulties {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+    .custom-fields {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+    .cell {
+
+        width: 25px;
+
+        height: 25px;
+
+        font-size: 14px;
+
+    }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<!-- =================================
+     MENU
+================================= -->
+
+<div id="menu" class="menu">
+
+    <h1>💣 Minesweeper</h1>
+
+
+    <div class="mode-title">
+
+        Choose Game Mode
+
+    </div>
+
+
+    <div class="mode-buttons">
+
+        <button
+            id="normal"
+            class="mode-button selected">
+
+            NORMAL
+
+        </button>
+
+
+        <button
+            id="timed"
+            class="mode-button">
+
+            TIMED
+
+        </button>
+
+    </div>
+
+
+    <div
+        id="modeDescription"
+        class="mode-description">
+
+        Normal mode has no time limit.
+
+    </div>
+
+
+    <!-- DIFFICULTIES -->
+
+    <div class="difficulties">
+
+
+        <button
+            class="difficulty"
+            data-level="easy">
+
+            EASY
+
+            <small>
+                9 × 9 • 10 mines
+                • Timed: 1:00
+            </small>
+
+        </button>
+
+
+        <button
+            class="difficulty"
+            data-level="medium">
+
+            MEDIUM
+
+            <small>
+                16 × 16 • 40 mines
+                • Timed: 3:00
+            </small>
+
+        </button>
+
+
+        <button
+            class="difficulty"
+            data-level="hard">
+
+            HARD
+
+            <small>
+                24 × 16 • 99 mines
+                • Timed: 5:00
+            </small>
+
+        </button>
+
+
+        <button
+            class="difficulty"
+            data-level="impossible">
+
+            IMPOSSIBLE
+
+            <small>
+                30 × 20 • 180 mines
+                • Timed: 5:00
+            </small>
+
+        </button>
+
+
+    </div>
+
+
+    <!-- CUSTOM -->
+
+    <div class="custom">
+
+        <h2>⚙️ CUSTOM</h2>
+
+
+        <div class="custom-fields">
+
+
+            <label>
+
+                Width
+
+                <input
+                    id="customWidth"
+                    type="number"
+                    min="5"
+                    max="40"
+                    value="15">
+
+            </label>
+
+
+            <label>
+
+                Height
+
+                <input
+                    id="customHeight"
+                    type="number"
+                    min="5"
+                    max="30"
+                    value="15">
+
+            </label>
+
+
+            <label>
+
+                Mines
+
+                <input
+                    id="customMines"
+                    type="number"
+                    min="1"
+                    value="40">
+
+            </label>
+
+
+        </div>
+
+
+        <button
+            id="customStart"
+            class="custom-start">
+
+            START CUSTOM GAME
+
+        </button>
+
+    </div>
+
+
+    <div class="info">
+
+        <strong>NORMAL:</strong>
+        No time limit.
+
+        <br>
+
+        <strong>TIMED:</strong>
+        Easy 1 minute,
+        Medium 3 minutes,
+        Hard 5 minutes,
+        Impossible 5 minutes.
+
+    </div>
+
+</div>
+
+
+
+<!-- =================================
+     GAME
+================================= -->
+
+<div id="game" class="game hidden">
+
+
+    <h1 id="gameTitle">
+        💣 Minesweeper
+    </h1>
+
+
+    <div class="game-header">
+
+
+        <div
+            id="mineCounter"
+            class="counter">
+
+            010
+
+        </div>
+
+
+        <button
+            id="restart"
+            class="restart">
+
+            🙂
+
+        </button>
+
+
+        <div
+            id="timer"
+            class="counter">
+
+            000
+
+        </div>
+
+
+    </div>
+
+
+    <div
+        id="board"
+        class="board">
+
+    </div>
+
+
+    <div
+        id="status"
+        class="status">
+
+    </div>
+
+
+    <div class="instructions">
+
+        Left click = reveal
+        &nbsp; | &nbsp;
+        Right click = flag
+
+    </div>
+
+
+    <button
+        id="back"
+        class="back">
+
+        ← Back to Menu
+
+    </button>
+
+
+</div>
+
+
+
+<script>
+
+/* =================================
+   DIFFICULTIES
+================================= */
+
+const levels = {
+
+    easy: {
+
+        name: "Easy",
+
+        width: 9,
+
+        height: 9,
+
+        mines: 10,
+
+        time: 60
+
+    },
+
+
+    medium: {
+
+        name: "Medium",
+
+        width: 16,
+
+        height: 16,
+
+        mines: 40,
+
+        time: 180
+
+    },
+
+
+    hard: {
+
+        name: "Hard",
+
+        width: 24,
+
+        height: 16,
+
+        mines: 99,
+
+        time: 300
+
+    },
+
+
+    impossible: {
+
+        name: "Impossible",
+
+        width: 30,
+
+        height: 20,
+
+        mines: 180,
+
+        time: 300
+
+    }
+
+};
+
+
+/* =================================
+   VARIABLES
+================================= */
+
+let width = 9;
+
+let height = 9;
+
+let mines = 10;
+
+let timeLimit = 60;
+
+let timedMode = false;
+
+let board = [];
+
+let gameOver = false;
+
+let firstClick = true;
+
+let flags = 0;
+
+let revealed = 0;
+
+let seconds = 0;
+
+let timerID = null;
+
+
+/* =================================
+   ELEMENTS
+================================= */
+
+const menu =
+    document.getElementById("menu");
+
+const game =
+    document.getElementById("game");
+
+const normal =
+    document.getElementById("normal");
+
+const timed =
+    document.getElementById("timed");
+
+const modeDescription =
+    document.getElementById(
+        "modeDescription"
+    );
+
+const boardElement =
+    document.getElementById("board");
+
+const mineCounter =
+    document.getElementById(
+        "mineCounter"
+    );
+
+const timerDisplay =
+    document.getElementById("timer");
+
+const restart =
+    document.getElementById("restart");
+
+const status =
+    document.getElementById("status");
+
+const gameTitle =
+    document.getElementById(
+        "gameTitle"
+    );
+
+
+/* =================================
+   NORMAL BUTTON
+================================= */
+
+normal.onclick = function() {
+
+    timedMode = false;
+
+    normal.classList.add(
+        "selected"
+    );
+
+    timed.classList.remove(
+        "selected"
+    );
+
+    modeDescription.textContent =
+        "Normal mode has no time limit.";
+
+};
+
+
+/* =================================
+   TIMED BUTTON
+================================= */
+
+timed.onclick = function() {
+
+    timedMode = true;
+
+    timed.classList.add(
+        "selected"
+    );
+
+    normal.classList.remove(
+        "selected"
+    );
+
+    modeDescription.textContent =
+        "Timed mode: beat the clock before the mines explode!";
+
+};
+
+
+/* =================================
+   DIFFICULTY BUTTONS
+================================= */
+
+document
+    .querySelectorAll(".difficulty")
+    .forEach(button => {
+
+        button.onclick = function() {
+
+            const level =
+                levels[
+                    button.dataset.level
+                ];
+
+
+            startGame(
+
+                level.width,
+
+                level.height,
+
+                level.mines,
+
+                level.time,
+
+                level.name
+
+            );
+
+        };
+
+    });
+
+
+/* =================================
+   CUSTOM GAME
+================================= */
+
+document
+    .getElementById("customStart")
+    .onclick = function() {
+
+
+        const customWidth =
+            parseInt(
+                document.getElementById(
+                    "customWidth"
+                ).value
+            );
+
+
+        const customHeight =
+            parseInt(
+                document.getElementById(
+                    "customHeight"
+                ).value
+            );
+
+
+        const customMines =
+            parseInt(
+                document.getElementById(
+                    "customMines"
+                ).value
+            );
+
+
+        const total =
+            customWidth *
+            customHeight;
+
+
+        if (
+            customWidth < 5 ||
+            customWidth > 40
+        ) {
+
+            alert(
+                "Width must be between 5 and 40."
+            );
+
+            return;
+
+        }
+
+
+        if (
+            customHeight < 5 ||
+            customHeight > 30
+        ) {
+
+            alert(
+                "Height must be between 5 and 30."
+            );
+
+            return;
+
+        }
+
+
+        if (
+            customMines < 1 ||
+            customMines >= total
+        ) {
+
+            alert(
+                "The number of mines must leave at least one safe square."
+            );
+
+            return;
+
+        }
+
+
+        /*
+           Custom timed games:
+
+           Small board = 1 minute
+           Medium board = 3 minutes
+           Large board = 5 minutes
+        */
+
+        let customTime = 0;
+
+
+        if (total <= 100) {
+
+            customTime = 60;
+
+        }
+
+        else if (total <= 256) {
+
+            customTime = 180;
+
+        }
+
+        else {
+
+            customTime = 300;
+
+        }
+
+
+        startGame(
+
+            customWidth,
+
+            customHeight,
+
+            customMines,
+
+            customTime,
+
+            "Custom"
+
+        );
+
+    };
+
+
+/* =================================
+   START GAME
+================================= */
+
+function startGame(
+    gameWidth,
+    gameHeight,
+    gameMines,
+    gameTime,
+    name
+) {
+
+    width =
+        gameWidth;
+
+    height =
+        gameHeight;
+
+    mines =
+        gameMines;
+
+    timeLimit =
+        gameTime;
+
+
+    menu.classList.add(
+        "hidden"
+    );
+
+    game.classList.remove(
+        "hidden"
+    );
+
+
+    gameTitle.textContent =
+        "💣 Minesweeper - " +
+        name;
+
+
+    createBoard();
+
+}
+
+
+/* =================================
+   CREATE BOARD
+================================= */
+
+function createBoard() {
+
+    clearInterval(
+        timerID
+    );
+
+
+    board = [];
+
+    gameOver = false;
+
+    firstClick = true;
+
+    flags = 0;
+
+    revealed = 0;
+
+    seconds = 0;
+
+
+    restart.textContent =
+        "🙂";
+
+
+    status.textContent =
+        "";
+
+
+    mineCounter.textContent =
+        formatNumber(mines);
+
+
+    /*
+       Normal mode starts at 000.
+
+       Timed mode shows the
+       total amount of time.
+    */
+
+    if (
+        timedMode
+    ) {
+
+        timerDisplay.textContent =
+            formatTime(
+                timeLimit
+            );
+
+    }
+
+    else {
+
+        timerDisplay.textContent =
+            "000";
+
+    }
+
+
+    boardElement.innerHTML =
+        "";
+
+
+    /*
+       Smaller cells for
+       very large maps.
+    */
+
+    let cellSize = 30;
+
+
+    if (width >= 30) {
+
+        cellSize = 24;
+
+    }
+
+    else if (width >= 24) {
+
+        cellSize = 26;
+
+    }
+
+
+    boardElement.style.gridTemplateColumns =
+        "repeat(" +
+        width +
+        ", " +
+        cellSize +
+        "px)";
+
+
+    for (
+        let row = 0;
+        row < height;
+        row++
+    ) {
+
+        board[row] = [];
+
+
+        for (
+            let col = 0;
+            col < width;
+            col++
+        ) {
+
+
+            const cell = {
+
+                row: row,
+
+                col: col,
+
+                mine: false,
+
+                revealed: false,
+
+                flagged: false,
+
+                number: 0,
+
+                element: null
+
+            };
+
+
+            const element =
+                document.createElement(
+                    "div"
+                );
+
+
+            element.className =
+                "cell";
+
+
+            element.style.width =
+                cellSize + "px";
+
+
+            element.style.height =
+                cellSize + "px";
+
+
+            element.onclick =
+                function() {
+
+                    reveal(
+                        row,
+                        col
+                    );
+
+                };
+
+
+            element.oncontextmenu =
+                function(event) {
+
+                    event.preventDefault();
+
+                    flag(
+                        row,
+                        col
+                    );
+
+                };
+
+
+            cell.element =
+                element;
+
+
+            board[row][col] =
+                cell;
+
+
+            boardElement.appendChild(
+                element
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =================================
+   PLACE MINES
+================================= */
+
+function placeMines(
+    safeRow,
+    safeCol
+) {
+
+    let positions = [];
+
+
+    for (
+        let row = 0;
+        row < height;
+        row++
+    ) {
+
+        for (
+            let col = 0;
+            col < width;
+            col++
+        ) {
+
+            if (
+                row === safeRow &&
+                col === safeCol
+            ) {
+
+                continue;
+
+            }
+
+
+            positions.push([
+                row,
+                col
+            ]);
+
+        }
+
+    }
+
+
+    /*
+       Randomize positions.
+    */
+
+    for (
+        let i =
+            positions.length - 1;
+        i > 0;
+        i--
+    ) {
+
+        const j =
+            Math.floor(
+                Math.random() *
+                (i + 1)
+            );
+
+
+        [
+            positions[i],
+            positions[j]
+        ] =
+        [
+            positions[j],
+            positions[i]
+        ];
+
+    }
+
+
+    /*
+       Add mines.
+    */
+
+    for (
+        let i = 0;
+        i < mines;
+        i++
+    ) {
+
+        const row =
+            positions[i][0];
+
+        const col =
+            positions[i][1];
+
+
+        board[row][col].mine =
+            true;
+
+    }
+
+
+    calculateNumbers();
+
+}
+
+
+/* =================================
+   CALCULATE NUMBERS
+================================= */
+
+function calculateNumbers() {
+
+    for (
+        let row = 0;
+        row < height;
+        row++
+    ) {
+
+        for (
+            let col = 0;
+            col < width;
+            col++
+        ) {
+
+            const cell =
+                board[row][col];
+
+
+            if (
+                cell.mine
+            ) {
+
+                continue;
+
+            }
+
+
+            let count = 0;
+
+
+            getNeighbors(
+                row,
+                col
+            ).forEach(
+                neighbor => {
+
+                    if (
+                        neighbor.mine
+                    ) {
+
+                        count++;
+
+                    }
+
+                }
+            );
+
+
+            cell.number =
+                count;
+
+        }
+
+    }
+
+}
+
+
+/* =================================
+   GET NEIGHBORS
+================================= */
+
+function getNeighbors(
+    row,
+    col
+) {
+
+    const result = [];
+
+
+    for (
+        let rowChange = -1;
+        rowChange <= 1;
+        rowChange++
+    ) {
+
+        for (
+            let colChange = -1;
+            colChange <= 1;
+            colChange++
+        ) {
+
+
+            if (
+                rowChange === 0 &&
+                colChange === 0
+            ) {
+
+                continue;
+
+            }
+
+
+            const newRow =
+                row +
+                rowChange;
+
+
+            const newCol =
+                col +
+                colChange;
+
+
+            if (
+                newRow >= 0 &&
+                newRow < height &&
+                newCol >= 0 &&
+                newCol < width
+            ) {
+
+                result.push(
+                    board[newRow][newCol]
+                );
+
+            }
+
+        }
+
+    }
+
+
+    return result;
+
+}
+
+
+/* =================================
+   REVEAL
+================================= */
+
+function reveal(
+    row,
+    col
+) {
+
+    if (
+        gameOver
+    ) {
+
+        return;
+
+    }
+
+
+    const cell =
+        board[row][col];
+
+
+    if (
+        cell.revealed ||
+        cell.flagged
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       First click:
+
+       create mines AFTER
+       the first click so
+       it is always safe.
+    */
+
+    if (
+        firstClick
+    ) {
+
+        firstClick =
+            false;
+
+
+        placeMines(
+            row,
+            col
+        );
+
+
+        startTimer();
+
+    }
+
+
+    /*
+       Mine!
+    */
+
+    if (
+        cell.mine
+    ) {
+
+        cell.revealed =
+            true;
+
+
+        cell.element.classList.add(
+            "revealed",
+            "exploded"
+        );
+
+
+        cell.element.textContent =
+            "💣";
+
+
+        lose();
+
+        return;
+
+    }
+
+
+    floodReveal(
+        cell
+    );
+
+
+    checkWin();
+
+}
+
+
+/* =================================
+   FLOOD REVEAL
+================================= */
+
+function floodReveal(
+    start
+) {
+
+    const queue =
+        [start];
+
+
+    while (
+        queue.length > 0
+    ) {
+
+        const cell =
+            queue.shift();
+
+
+        if (
+            cell.revealed ||
+            cell.flagged ||
+            cell.mine
+        ) {
+
+            continue;
+
+        }
+
+
+        cell.revealed =
+            true;
+
+
+        revealed++;
+
+
+        cell.element.classList.add(
+            "revealed"
+        );
+
+
+        if (
+            cell.number > 0
+        ) {
+
+            cell.element.textContent =
+                cell.number;
+
+
+            cell.element.classList.add(
+                numberClass(
+                    cell.number
+                )
+            );
+
+        }
+
+        else {
+
+            getNeighbors(
+                cell.row,
+                cell.col
+            ).forEach(
+                neighbor => {
+
+                    if (
+                        !neighbor.revealed &&
+                        !neighbor.mine
+                    ) {
+
+                        queue.push(
+                            neighbor
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =================================
+   FLAG
+================================= */
+
+function flag(
+    row,
+    col
+) {
+
+    if (
+        gameOver
+    ) {
+
+        return;
+
+    }
+
+
+    const cell =
+        board[row][col];
+
+
+    if (
+        cell.revealed
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        !cell.flagged &&
+        flags >= mines
+    ) {
+
+        return;
+
+    }
+
+
+    cell.flagged =
+        !cell.flagged;
+
+
+    if (
+        cell.flagged
+    ) {
+
+        flags++;
+
+
+        cell.element.textContent =
+            "🚩";
+
+
+        cell.element.classList.add(
+            "flagged"
+        );
+
+    }
+
+    else {
+
+        flags--;
+
+
+        cell.element.textContent =
+            "";
+
+
+        cell.element.classList.remove(
+            "flagged"
+        );
+
+    }
+
+
+    mineCounter.textContent =
+        formatNumber(
+            mines - flags
+        );
+
+}
+
+
+/* =================================
+   CHECK WIN
+================================= */
+
+function checkWin() {
+
+    const safeSquares =
+        width *
+        height -
+        mines;
+
+
+    if (
+        revealed ===
+        safeSquares
+    ) {
+
+        gameOver =
+            true;
+
+
+        clearInterval(
+            timerID
+        );
+
+
+        restart.textContent =
+            "😎";
+
+
+        status.textContent =
+            "YOU WIN! 🎉";
+
+
+        /*
+           Automatically flag mines.
+        */
+
+        for (
+            let row = 0;
+            row < height;
+            row++
+        ) {
+
+            for (
+                let col = 0;
+                col < width;
+                col++
+            ) {
+
+                const cell =
+                    board[row][col];
+
+
+                if (
+                    cell.mine
+                ) {
+
+                    cell.flagged =
+                        true;
+
+
+                    cell.element.textContent =
+                        "🚩";
+
+
+                    cell.element.classList.add(
+                        "flagged"
+                    );
+
+                }
+
+            }
+
+        }
+
+
+        mineCounter.textContent =
+            "000";
+
+    }
+
+}
+
+
+/* =================================
+   LOSE
+================================= */
+
+function lose() {
+
+    gameOver =
+        true;
+
+
+    clearInterval(
+        timerID
+    );
+
+
+    restart.textContent =
+        "😵";
+
+
+    status.textContent =
+        "GAME OVER! 💥";
+
+
+    showMines();
+
+}
+
+
+/* =================================
+   SHOW MINES
+================================= */
+
+function showMines() {
+
+    for (
+        let row = 0;
+        row < height;
+        row++
+    ) {
+
+        for (
+            let col = 0;
+            col < width;
+            col++
+        ) {
+
+            const cell =
+                board[row][col];
+
+
+            if (
+                cell.mine
+            ) {
+
+                cell.element.classList.add(
+                    "revealed",
+                    "mine"
+                );
+
+
+                if (
+                    !cell.element.classList.contains(
+                        "exploded"
+                    )
+                ) {
+
+                    cell.element.textContent =
+                        "💣";
+
+                }
+
+            }
+
+        }
+
+    }
+
+}
+
+
+/* =================================
+   TIME LIMIT
+================================= */
+
+function timeUp() {
+
+    gameOver =
+        true;
+
+
+    clearInterval(
+        timerID
+    );
+
+
+    timerDisplay.textContent =
+        "00:00";
+
+
+    restart.textContent =
+        "💀";
+
+
+    status.textContent =
+        "TIME'S UP! 💥";
+
+
+    /*
+       All mines explode.
+    */
+
+    for (
+        let row = 0;
+        row < height;
+        row++
+    ) {
+
+        for (
+            let col = 0;
+            col < width;
+            col++
+        ) {
+
+            const cell =
+                board[row][col];
+
+
+            if (
+                cell.mine
+            ) {
+
+                cell.element.classList.add(
+                    "revealed",
+                    "exploded"
+                );
+
+
+                cell.element.textContent =
+                    "💥";
+
+            }
+
+        }
+
+    }
+
+}
+
+
+/* =================================
+   TIMER
+================================= */
+
+function startTimer() {
+
+    timerID =
+        setInterval(
+            function() {
+
+
+                if (
+                    gameOver
+                ) {
+
+                    return;
+
+                }
+
+
+                seconds++;
+
+
+                /*
+                   TIMED MODE
+                */
+
+                if (
+                    timedMode
+                ) {
+
+                    const remaining =
+                        timeLimit -
+                        seconds;
+
+
+                    timerDisplay.textContent =
+                        formatTime(
+                            Math.max(
+                                0,
+                                remaining
+                            )
+                        );
+
+
+                    if (
+                        remaining <= 0
+                    ) {
+
+                        timeUp();
+
+                    }
+
+                }
+
+
+                /*
+                   NORMAL MODE
+                */
+
+                else {
+
+                    timerDisplay.textContent =
+                        formatNumber(
+                            seconds
+                        );
+
+                }
+
+
+            },
+            1000
+        );
+
+}
+
+
+/* =================================
+   FORMAT NUMBERS
+================================= */
+
+function formatNumber(
+    number
+) {
+
+    return String(
+        Math.max(
+            0,
+            number
+        )
+    ).padStart(
+        3,
+        "0"
+    );
+
+}
+
+
+function formatTime(
+    seconds
+) {
+
+    const minutes =
+        Math.floor(
+            seconds / 60
+        );
+
+
+    const secs =
+        seconds % 60;
+
+
+    return (
+        String(minutes)
+            .padStart(2, "0")
+        +
+        ":"
+        +
+        String(secs)
+            .padStart(2, "0")
+    );
+
+}
+
+
+/* =================================
+   NUMBER COLORS
+================================= */
+
+function numberClass(
+    number
+) {
+
+    return [
+        "",
+        "one",
+        "two",
+        "three",
+        "four",
+        "five",
+        "six",
+        "seven",
+        "eight"
+    ][number];
+
+}
+
+
+/* =================================
+   RESTART
+================================= */
+
+restart.onclick =
+    function() {
+
+        createBoard();
+
+    };
+
+
+/* =================================
+   BACK TO MENU
+================================= */
+
+document
+    .getElementById("back")
+    .onclick =
+    function() {
+
+        clearInterval(
+            timerID
+        );
+
+
+        game.classList.add(
+            "hidden"
+        );
+
+
+        menu.classList.remove(
+            "hidden"
+        );
+
+    };
+
+</script>
+
+</body>
+
+</html>

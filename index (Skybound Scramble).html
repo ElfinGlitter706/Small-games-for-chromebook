@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Skybound Scramble</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#10162b;font-family:"Courier New",monospace;color:#fff}
+  body{display:flex;align-items:center;justify-content:center}
+  #wrap{position:relative;width:min(100vw,520px);height:min(100vh,780px);max-height:100vh;background:#17213b;overflow:hidden;box-shadow:0 0 0 4px #080b16,0 0 35px #000}
+  canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(11,16,34,.88);padding:22px;text-align:center}
+  .hidden{display:none!important}
+  h1{font-size:34px;line-height:1;margin:0 0 8px;color:#ffe36e;text-shadow:4px 4px #6a3f72;letter-spacing:2px}
+  h2{color:#ffe36e;margin:6px 0 16px}
+  .subtitle{color:#a9c7ff;margin-bottom:20px}
+  button{font:inherit;font-weight:bold;color:#17213b;background:#ffe36e;border:0;border-bottom:5px solid #9c7125;padding:12px 18px;margin:7px;cursor:pointer;min-width:190px;box-shadow:4px 4px #080b16}
+  button:hover{filter:brightness(1.12);transform:translateY(-1px)}
+  button:active{transform:translateY(2px);border-bottom-width:2px}
+  .row{display:flex;flex-wrap:wrap;justify-content:center}
+  .smallbtn{min-width:125px;font-size:13px;padding:9px 12px}
+  .panel{width:min(440px,95%);max-height:92%;overflow:auto;background:#1f2d50;border:4px solid #526b9f;padding:16px;box-shadow:6px 6px #080b16}
+  .coinbar{color:#ffe36e;margin:6px 0 12px;font-weight:bold}
+  .tip{font-size:12px;color:#b7c9ed;line-height:1.5}
+  .cosgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;text-align:left}
+  .cos{background:#293b64;border:2px solid #4d6597;padding:9px;cursor:pointer;position:relative}
+  .cos.locked{opacity:.55}
+  .cos.selected{border-color:#ffe36e;box-shadow:inset 0 0 0 2px #ffe36e}
+  .cos strong{display:block;color:#fff}
+  .cos span{font-size:11px;color:#a9c7ff}
+  .swatch{width:30px;height:30px;float:right;border:2px solid #10162b}
+  label{display:block;margin:14px 0 7px;color:#dbe7ff}
+  input[type=range]{width:100%;accent-color:#ffe36e}
+  .value{color:#ffe36e}
+  .how{font-size:13px;line-height:1.55;text-align:left}
+  .legend{display:flex;align-items:center;gap:10px;background:#293b64;margin:7px 0;padding:8px}
+  .pix{width:36px;height:24px;flex:none;border:2px solid #10162b}
+  .normal{background:#59b86b}
+  .break{background:#c78655}
+  .spring{background:#55a7d9}
+  .moverH{background:#c45bd6}
+  .moverV{background:#e89b3d}
+  #hud{position:absolute;left:60px;right:10px;top:10px;display:flex;justify-content:space-between;pointer-events:none;font-weight:bold;text-shadow:2px 2px #080b16;font-size:14px}
+  #gameOver{background:rgba(11,16,34,.92)}
+  .scoreBig{font-size:30px;color:#ffe36e;margin:10px}
+  .gear{position:absolute;left:10px;top:9px;z-index:5;width:38px;height:38px;min-width:0;padding:4px;font-size:20px;background:#293b64;color:#fff;border:2px solid #5b73a8;box-shadow:3px 3px #080b16}
+  #settingsGear{display:none}
+  #coinPopups{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .coinpop{position:absolute;color:#ffe36e;font-weight:bold;font-size:18px;text-shadow:2px 2px #6a3f72;animation:coinup .65s steps(5) forwards}
+  @keyframes coinup{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-35px) scale(1.15)}}
+  .flash{animation:flash .15s steps(2) 2}
+  @keyframes flash{50%{filter:brightness(1.8)}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="520" height="780"></canvas>
+  <button id="gear" class="gear" title="Settings">⚙</button>
+  <div id="coinPopups"></div>
+  <div id="hud" class="hidden">
+    <span id="scoreHud">SCORE 0</span><span id="coinsHud">● 0</span>
+  </div>
+  <div id="menu" class="screen">
+    <h1>SKYBOUND<br>SCRAMBLE</h1>
+    <div class="subtitle">A tiny pixel-art jump adventure</div>
+    <button id="startBtn">START GAME</button>
+    <div class="row">
+      <button class="smallbtn" id="customBtn">CUSTOMIZE</button>
+      <button class="smallbtn" id="howBtn">HOW TO PLAY</button>
+    </div>
+    <div class="tip">← → move • land • bounce • climb</div>
+  </div>
+  <div id="custom" class="screen hidden">
+    <div class="panel">
+      <h2>CUSTOMIZE</h2>
+      <div class="coinbar">COINS: <span id="customCoins">0</span></div>
+      <canvas id="preview" width="120" height="150" style="display:block;margin:8px auto 14px;background:#182442;border:3px solid #526b9f;image-rendering:pixelated"></canvas>
+      <div class="tip">Click an unlocked item to equip it. Some cosmetics cost coins.</div>
+      <div id="cosmetics"></div>
+      <button id="customBack">BACK</button>
+    </div>
+  </div>
+  <div id="how" class="screen hidden">
+    <div class="panel">
+      <h2>HOW TO PLAY</h2>
+      <div class="how">
+        <p><b>Goal:</b> keep climbing and get the highest score possible.</p>
+        <p><b>Controls:</b> use the LEFT and RIGHT arrow keys. Your character automatically bounces when landing.</p>
+        <div class="legend"><div class="pix normal"></div><div><b>Solid platform</b><br>Safe to land on. It stays forever.</div></div>
+        <div class="legend"><div class="pix break"></div><div><b>Break platform</b><br>Works for one landing, then disappears.</div></div>
+        <div class="legend"><div class="pix spring"></div><div><b>Spring platform</b><br>Gives you a much stronger bounce and launches you higher.</div></div>
+        <div class="legend"><div class="pix moverH"></div><div><b>Horizontal mover</b><br>Slides left and right. Watch the path lines to time your landing.</div></div>
+        <div class="legend"><div class="pix moverV"></div><div><b>Vertical mover</b><br>Glides up and down. Path lines show its travel range.</div></div>
+        <p>Collect the floating coins as you climb. New cosmetics can be bought from the Customize menu.</p>
+        <p class="tip">Moving platforms appear after you climb higher (score ~600+).</p>
+      </div>
+      <button id="howBack">BACK</button>
+    </div>
+  </div>
+  <div id="settings" class="screen hidden">
+    <div class="panel">
+      <h2 id="settingsTitle">SETTINGS</h2>
+      <label>Movement sensitivity: <span class="value" id="sensValue">1.00×</span></label>
+      <input id="sensitivity" type="range" min=".5" max="2" value="1" step=".05">
+      <p class="tip">Higher sensitivity makes horizontal movement faster.</p>
+      <button id="resetBtn">RESET EVERYTHING</button>
+      <button id="settingsBack">BACK</button>
+    </div>
+  </div>
+  <div id="resetConfirm" class="screen hidden">
+    <div class="panel">
+      <h2>RESET EVERYTHING?</h2>
+      <p style="line-height:1.6;color:#dbe7ff;">
+        Clicking this button will reset EVERYTHING,<br>
+        your score, character, and coins.<br>
+        Continue?
+      </p>
+      <button id="resetYes">YES</button>
+      <button id="resetNo">NO</button>
+    </div>
+  </div>
+  <div id="pause" class="screen hidden">
+    <div class="panel">
+      <h2>PAUSED</h2>
+      <button id="resumeBtn">RESUME</button>
+      <button id="pauseSettingsBtn">SETTINGS</button>
+      <button id="pauseMenuBtn">QUIT TO MENU</button>
+    </div>
+  </div>
+  <div id="gameOver" class="screen hidden">
+    <h2>RUN OVER!</h2>
+    <div class="scoreBig" id="finalScore">0</div>
+    <div>BEST SCORE: <span id="bestScore">0</span></div>
+    <button id="againBtn">PLAY AGAIN</button>
+    <button id="overMenuBtn">MENU</button>
+  </div>
+</div>
+<script>
+(() => {
+"use strict";
+const canvas=document.getElementById("game"), ctx=canvas.getContext("2d");
+ctx.imageSmoothingEnabled=false;
+const W=520,H=780;
+const $=id=>document.getElementById(id);
+const screens=["menu","custom","how","settings","resetConfirm","gameOver"];
+const defaultState={
+  best:0, coins:0, sensitivity:1,
+  equipped:{hair:"Classic",shirt:"Blue",pants:"Denim",glasses:"None",hat:"None",shoes:"Sneakers",backpack:"None"},
+  owned:{
+    hair:["Classic"], shirt:["Blue"], pants:["Denim"], glasses:["None"], hat:["None"], shoes:["Sneakers"], backpack:["None"]
+  }
+};
+let state=JSON.parse(localStorage.getItem("skyboundState")||"null")||structuredClone(defaultState);
+function save(){localStorage.setItem("skyboundState",JSON.stringify(state));}
+if(!state.owned) state.owned=structuredClone(defaultState.owned);
+if(!state.equipped) state.equipped=structuredClone(defaultState.equipped);
+for(const k of ["shoes","backpack"]){ if(!state.owned[k]) state.owned[k]=[defaultState.equipped[k]]; if(!state.equipped[k]) state.equipped[k]=defaultState.equipped[k]; }
+const labels={hair:"Hair",shirt:"Shirt",pants:"Pants",glasses:"Glasses",hat:"Hat",shoes:"Shoes",backpack:"Backpack"};
+const cosmetics={
+ hair:[
+  ["Classic",0,"#6b3b25"],["Spiky",35,"#6b3b25"],["Green Tips",70,"#62d46b"],["Purple",110,"#a56de2"],["Blue",145,"#5fa9e8"],["Mohawk",190,"#e85d72"]
+ ],
+ shirt:[
+  ["Blue",0,"#4e8eea"],["Red",40,"#d95858"],["Mint",75,"#5bd1ad"],["Gold",125,"#e8bd45"],["Purple",160,"#8d5bd6"],["White",200,"#e8edf5"]
+ ],
+ pants:[
+  ["Denim",0,"#435f9b"],["Black",45,"#202338"],["Cream",80,"#e7d39c"],["Purple",130,"#69459d"],["Green",165,"#4e9a63"],["Red",210,"#a94450"]
+ ],
+ glasses:[
+  ["None",0,"#000"],["Square",50,"#9de6ff"],["Red Frames",90,"#e65b66"],["Star Lens",150,"#ffe36e"],["Green Lens",190,"#65e08b"]
+ ],
+ hat:[
+  ["None",0,"#000"],["Beanie",60,"#e85d72"],["Crown",120,"#ffe36e"],["Cap",85,"#5fc4a4"],["Wizard",175,"#7351b8"],["Halo",220,"#fff1a8"]
+ ],
+ shoes:[
+  ["Sneakers",0,"#e8edf5"],["Red Kicks",65,"#d95858"],["Golden Boots",140,"#e8bd45"]
+ ],
+ backpack:[
+  ["None",0,"#000"],["Tiny Pack",90,"#e07b50"],["Blue Pack",150,"#4e8eea"]
+ ]
+};
+function show(id){
+  screens.concat(["pause"]).forEach(s=>$(s).classList.toggle("hidden",s!==id));
+  $("hud").classList.toggle("hidden",id!=="game" && id!=="pause");
+  $("gear").classList.toggle("hidden",id==="pause" || id==="settings" || id==="gameOver");
+  if(id==="custom") renderCosmetics();
+  if(id==="settings") updateSettingsUI();
+}
+$("gear").onclick=()=>{
+  if(game.running){game.running=false;show("pause");}
+  else if(game.player && !game.running && !$("gameOver").classList.contains("hidden")) show("gameOver");
+  else show("settings");
+};
+$("resumeBtn").onclick=()=>{show("game");game.running=true;game.last=performance.now();requestAnimationFrame(loop)};
+$("pauseSettingsBtn").onclick=()=>show("settings");
+$("pauseMenuBtn").onclick=()=>{game.running=false;game.player=null;show("menu")};
+$("startBtn").onclick=()=>startGame();
+$("againBtn").onclick=()=>startGame();
+$("overMenuBtn").onclick=()=>show("menu");
+$("customBtn").onclick=()=>show("custom");
+$("howBtn").onclick=()=>show("how");
+$("customBack").onclick=()=>show("menu");
+$("howBack").onclick=()=>show("menu");
+$("settingsBack").onclick=()=>{ if(game.player) show("pause"); else show("menu"); };
+$("resetBtn").onclick=()=>{
+  show("resetConfirm");
+};
+$("resetYes").onclick=()=>{
+  state=structuredClone(defaultState);
+  save();
+  updateSettingsUI();
+  renderCosmetics();
+  show("settings");
+};
+$("resetNo").onclick=()=>{
+  show("settings");
+};
+$("sensitivity").oninput=e=>{state.sensitivity=+e.target.value;save();updateSettingsUI()};
+function drawPreview(){
+ const pc=document.getElementById("preview"); if(!pc)return;
+ const ox=47,oy=53;
+ const c=pc.getContext("2d"); c.imageSmoothingEnabled=false;c.fillStyle="#182442";c.fillRect(0,0,120,150);
+ drawPreviewCharacter(c,ox,oy);
+}
+function drawPreviewCharacter(c,x,y){
+ const pants=({Denim:"#435f9b",Black:"#202338",Cream:"#e7d39c",Purple:"#69459d",Green:"#4e9a63",Red:"#a94450"})[state.equipped.pants]||"#435f9b";
+ const shirt=({Blue:"#4e8eea",Red:"#d95858",Mint:"#5bd1ad",Gold:"#e8bd45",Purple:"#8d5bd6",White:"#e8edf5"})[state.equipped.shirt]||"#4e8eea";
+ c.fillStyle=pants;c.fillRect(x+5,y+22,7,11);c.fillRect(x+15,y+22,7,11);
+ c.fillStyle=shirt;c.fillRect(x+4,y+12,19,13);
+ c.fillStyle="#e9b77e";c.fillRect(x,y+14,5,11);c.fillRect(x+22,y+14,5,11);c.fillRect(x+5,y+3,17,13);
+ let hc=({Classic:"#6b3b25",Spiky:"#6b3b25","Green Tips":"#62d46b",Purple:"#a56de2",Blue:"#5fa9e8",Mohawk:"#e85d72"})[state.equipped.hair]||"#6b3b25";
+ c.fillStyle=hc;c.fillRect(x+4,y,19,7);c.fillRect(x+2,y+4,6,7);
+ c.fillStyle="#182442";c.fillRect(x+9,y+9,3,3);c.fillRect(x+17,y+9,3,3);
+ const g=state.equipped.glasses;if(g!=="None"){c.strokeStyle=({Square:"#9de6ff","Red Frames":"#e65b66","Star Lens":"#ffe36e","Green Lens":"#65e08b"})[g];c.lineWidth=2;c.strokeRect(x+6,y+7,7,6);c.strokeRect(x+15,y+7,7,6);c.beginPath();c.moveTo(x+13,y+9);c.lineTo(x+15,y+9);c.stroke();}
+ const h=state.equipped.hat;if(h==="Beanie"){c.fillStyle="#e85d72";c.fillRect(x+4,y-5,19,7);c.fillRect(x+8,y-9,11,5)}else if(h==="Cap"){c.fillStyle="#5fc4a4";c.fillRect(x+4,y-4,18,5);c.fillRect(x+18,y,8,3)}else if(h==="Crown"){c.fillStyle="#ffe36e";c.fillRect(x+5,y-7,18,5);c.fillRect(x+6,y-10,4,4);c.fillRect(x+12,y-12,4,6);c.fillRect(x+18,y-10,4,4)}else if(h==="Wizard"){c.fillStyle="#7351b8";c.fillRect(x+4,y-6,19,4);c.fillRect(x+8,y-13,11,8)}else if(h==="Halo"){c.strokeStyle="#fff1a8";c.lineWidth=3;c.strokeRect(x+5,y-9,18,4);}
+ const b=state.equipped.backpack;if(b!=="None"){c.fillStyle=({ "Tiny Pack":"#e07b50","Blue Pack":"#4e8eea"})[b];c.fillRect(x-3,y+14,5,13)}
+ const sh=state.equipped.shoes;if(sh==="Red Kicks")c.fillStyle="#d95858";else if(sh==="Golden Boots")c.fillStyle="#e8bd45";else c.fillStyle="#e8edf5";c.fillRect(x+3,y+31,10,4);c.fillRect(x+14,y+31,10,4);
+}
+function renderCosmetics(){
+  $("customCoins").textContent=state.coins;
+  drawPreview();
+  const box=$("cosmetics");box.innerHTML="";
+  for(const type of Object.keys(cosmetics)){
+    const title=document.createElement("h3");title.textContent=labels[type];title.style.margin="13px 0 6px";box.appendChild(title);
+    const grid=document.createElement("div");grid.className="cosgrid";
+    cosmetics[type].forEach(([name,cost,color])=>{
+      const owned=state.owned[type].includes(name), selected=state.equipped[type]===name;
+      const el=document.createElement("div");el.className="cos "+(owned?"":"locked ")+(selected?"selected":"");
+      el.innerHTML=`<div class="swatch" style="background:${color}"></div><strong>${name}</strong><span>${owned?"OWNED":cost+" COINS"}</span>`;
+      el.onclick=()=>{
+        if(owned){state.equipped[type]=name;save();renderCosmetics();}
+        else if(state.coins>=cost){
+          state.coins-=cost;state.owned[type].push(name);state.equipped[type]=name;save();renderCosmetics();
+        }
+      };
+      grid.appendChild(el);
+    });
+    box.appendChild(grid);
+  }
+}
+function updateSettingsUI(){
+  $("sensitivity").value=state.sensitivity;
+  $("sensValue").textContent=state.sensitivity.toFixed(2)+"×";
+}
+let secretClicks=0,secretTimer=null;
+$("settingsTitle").addEventListener("click",()=>{
+  secretClicks++;
+  $("settingsTitle").textContent = "SETTINGS " + "★".repeat(Math.min(secretClicks,10));
+  clearTimeout(secretTimer);
+  secretTimer=setTimeout(()=>secretClicks=0,1500);
+  if(secretClicks>=10){
+    state.coins=99999;save();secretClicks=0;
+    $("settingsTitle").textContent="SETTINGS ★ UNLOCKED!";
+    $("settingsTitle").classList.add("flash");
+    setTimeout(()=>{$("settingsTitle").classList.remove("flash");$("settingsTitle").textContent="SETTINGS";},1800);
+    alert("Secret unlocked! You received 99,999 coins.");
+    updateSettingsUI();
+  }
+});
+const keys={left:false,right:false};
+addEventListener("keydown",e=>{
+ if(e.key==="ArrowLeft"||e.key==="ArrowRight") e.preventDefault();
+ if(e.key==="ArrowLeft")keys.left=true;
+ if(e.key==="ArrowRight")keys.right=true;
+});
+addEventListener("keyup",e=>{
+ if(e.key==="ArrowLeft")keys.left=false;
+ if(e.key==="ArrowRight")keys.right=false;
+});
+function rand(a,b){return Math.random()*(b-a)+a}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function rectHit(a,b){return a.x<a.w+b.x && a.x+a.w>b.x && a.y<a.h+b.y && a.y+a.h>b.y}
+const game={
+ running:false,last:0,time:0,score:0,scroll:0,player:null,platforms:[],coins:[],particles:[],
+ lastPlatX:W/2, lastPlatY:0,
+ // After a horizontal mover, force the next platform into a special pattern
+ pendingMoverPattern: null   // null | "ride" | "wait"
+};
+// Score threshold after which moving platforms start appearing
+const MOVER_SCORE = 600;
+
+function startGame(){
+ show("game");
+ game.running=true;game.last=performance.now();game.time=0;game.score=0;game.scroll=0;
+ game.platforms=[];game.coins=[];game.particles=[];
+ game.pendingMoverPattern = null;
+ $("scoreHud").style.color="#fff";
+ game.player={x:W/2-13,y:H-125,w:26,h:34,vx:0,vy:-680,onSpring:false,landAnim:0,squash:1};
+ let y=H-60;
+ // Starting platform (always solid, centered)
+ game.platforms.push({x:W/2-55,y,w:110,h:14,type:"solid",used:false,bounce:0});
+ game.lastPlatX = W/2;
+ game.lastPlatY = y;
+ y-=90;
+ while(y>-200){
+   addPlatform(y);
+   y = game.lastPlatY - rand(75,115);
+ }
+ for(let i=0;i<8;i++) addCoin(rand(35,W-35),rand(120,H-100));
+ requestAnimationFrame(loop);
+}
+
+function addPlatform(y){
+  // Jumps are intentionally long but still reachable.
+  // Player max speed ~280, air time ~0.9s → theoretical ~250px.
+  // We use ~205 so most jumps feel tight / "barely makeable".
+  const maxJumpX = 205;
+  const preferFar = 0.65;   // chance to push toward the outer end of the range
+
+  let type;
+  const r = Math.random();
+  // After MOVER_SCORE, occasionally spawn moving platforms
+  if(game.score >= MOVER_SCORE){
+    if(r < 0.11) type = "moverH";
+    else if(r < 0.19) type = "moverV";
+    else if(r < 0.32) type = "spring";
+    else if(r < 0.50) type = "break";
+    else type = "solid";
+  } else {
+    if(r < 0.16) type = "spring";
+    else if(r < 0.37) type = "break";
+    else type = "solid";
+  }
+
+  // If we have a pending pattern from a previous horizontal mover, force a solid/break
+  // so the pattern is clean (don't stack movers back-to-back too often).
+  if(game.pendingMoverPattern){
+    type = Math.random() < 0.25 ? "break" : "solid";
+  }
+
+  let w;
+  if(type === "spring") w = 90;
+  else if(type === "moverH" || type === "moverV") w = rand(75, 100);
+  else w = rand(70, 110);
+
+  let x;
+
+  // ---------- Special placement after a horizontal mover ----------
+  if(game.pendingMoverPattern === "ride"){
+    // Force the next platform toward the OPPOSITE side of the screen.
+    // Player must stay on the mover (or time a long jump from the far end).
+    const goRight = game.lastPlatX < W / 2;
+    if(goRight){
+      x = rand(W * 0.62, W - w - 18);
+    } else {
+      x = rand(18, W * 0.38 - w);
+    }
+    // Still clamp so a skilled jump from the mover's edge remains possible
+    x = clamp(x, game.lastPlatX - maxJumpX - 30, game.lastPlatX + maxJumpX + 30);
+    x = clamp(x, 12, W - w - 12);
+    game.pendingMoverPattern = null;
+  }
+  else if(game.pendingMoverPattern === "wait"){
+    // Place the next platform on the SAME side the mover started from
+    // (or near where it will return). Player often needs to wait for the
+    // mover to come back toward them before continuing.
+    const stayLeft = game.lastPlatX < W / 2;
+    if(stayLeft){
+      x = rand(18, Math.min(game.lastPlatX + 40, W * 0.45));
+    } else {
+      x = rand(Math.max(game.lastPlatX - 40, W * 0.55), W - w - 18);
+    }
+    x = clamp(x, 12, W - w - 12);
+    game.pendingMoverPattern = null;
+  }
+  // ---------- Normal placement (and mover spawn) ----------
+  else {
+    if(type === "moverH"){
+      // Start the mover near the previous platform so it is landable,
+      // then decide which pattern the FOLLOWING platform will use.
+      x = clamp(game.lastPlatX + rand(-maxJumpX * 0.55, maxJumpX * 0.55), 25, W - w - 25);
+      // ~45% chance of a full-ish ride, otherwise a "wait for it" pattern
+      game.pendingMoverPattern = Math.random() < 0.45 ? "ride" : "wait";
+    }
+    else if(type === "moverV"){
+      x = clamp(game.lastPlatX + rand(-maxJumpX * 0.6, maxJumpX * 0.6), 20, W - w - 20);
+    }
+    else {
+      // Prefer longer jumps: bias the offset toward the outer part of the reachable range
+      let offset;
+      if(Math.random() < preferFar){
+        // Far side of the jump range (feels tight)
+        const sign = Math.random() < 0.5 ? 1 : -1;
+        offset = sign * rand(maxJumpX * 0.55, maxJumpX);
+      } else {
+        offset = rand(-maxJumpX, maxJumpX);
+      }
+      x = clamp(game.lastPlatX + offset, 12, W - w - 12);
+    }
+  }
+
+  // Final safety clamp – never create an impossible gap
+  const dx = Math.abs(x - game.lastPlatX);
+  if(dx > maxJumpX + 35){
+    x = game.lastPlatX + (x > game.lastPlatX ? maxJumpX : -maxJumpX);
+    x = clamp(x, 12, W - w - 12);
+  }
+
+  const plat = {
+    x, y, w, h:14, type, used:false, bounce:0
+  };
+
+  // Movement parameters for the new platform types
+  if(type === "moverH"){
+    plat.minX = 18;
+    plat.maxX = W - w - 18;
+    plat.speed = rand(75, 140);
+    // Start moving toward the farther side so "ride" patterns feel natural
+    plat.dir = (x < W / 2) ? 1 : -1;
+    plat.pathY = y;
+  } else if(type === "moverV"){
+    plat.baseY = y;
+    plat.amp = rand(40, 75);
+    plat.speed = rand(1.1, 2.0);
+    plat.phase = rand(0, Math.PI * 2);
+    plat.fixedX = x;
+  }
+
+  game.platforms.push(plat);
+  game.lastPlatX = x + w / 2;
+  game.lastPlatY = y;
+}
+
+function addCoin(x,y){game.coins.push({x,y,r:7,spin:rand(0,6.28)})}
+function coinPopup(x,y){
+ const el=document.createElement("div");el.className="coinpop";el.textContent="+1";
+ el.style.left=(x/W*100)+"%";el.style.top=(y/H*100)+"%";$("coinPopups").appendChild(el);
+ setTimeout(()=>el.remove(),700);
+}
+function spawnBreak(pl){
+ for(let i=0;i<9;i++) game.particles.push({x:pl.x+rand(0,pl.w),y:pl.y,vx:rand(-170,170),vy:rand(-120,30),life:.5,break:true});
+}
+function spawnParticles(x,y,n=7){
+ for(let i=0;i<n;i++) game.particles.push({x,y,vx:rand(-80,80),vy:rand(-150,-40),life:.5});
+}
+function update(dt){
+ const p=game.player;
+ const accel=1450*state.sensitivity;
+ if(keys.left)p.vx-=accel*dt;
+ if(keys.right)p.vx+=accel*dt;
+ p.vx*=Math.pow(.001,dt);
+ p.vx=clamp(p.vx,-280*state.sensitivity,280*state.sensitivity);
+ p.x+=p.vx*dt;
+ if(p.x<-p.w)p.x=W;
+ if(p.x>W)p.x=-p.w;
+ const oldBottom=p.y+p.h;
+ p.vy+=1500*dt;
+ p.y+=p.vy*dt;
+
+ // Move the moving platforms
+ for(const pl of game.platforms){
+   if(pl.type === "moverH"){
+     pl.x += pl.speed * pl.dir * dt;
+     if(pl.x <= pl.minX){ pl.x = pl.minX; pl.dir = 1; }
+     if(pl.x >= pl.maxX){ pl.x = pl.maxX; pl.dir = -1; }
+   } else if(pl.type === "moverV"){
+     pl.phase += pl.speed * dt;
+     pl.y = pl.baseY + Math.sin(pl.phase) * pl.amp;
+   }
+ }
+
+ // platform landings
+ if(p.vy>0){
+   for(const pl of game.platforms){
+     if(pl.used&&pl.type==="break")continue;
+     const newBottom=p.y+p.h;
+     if(oldBottom<=pl.y+4 && newBottom>=pl.y && p.x+p.w>pl.x+5 && p.x<pl.x+pl.w-5){
+       p.y=pl.y-p.h;
+       // Trigger crouch → pop jump animation
+       p.landAnim = 0.28;
+       if(pl.type==="spring"){
+         p.vy=-1040;spawnParticles(p.x+p.w/2,pl.y,12);pl.bounce=.25;
+       }else{
+         p.vy=-690;spawnParticles(p.x+p.w/2,pl.y,6);
+         if(pl.type==="break"){pl.used=true;pl.breakTime=.5;spawnBreak(pl)}
+       }
+       break;
+     }
+   }
+ }
+
+ // Jump squash / stretch animation
+ if(p.landAnim > 0){
+   p.landAnim -= dt;
+   if(p.landAnim > 0.18){
+     // Crouch phase – squash down
+     p.squash = 0.72;
+   } else if(p.landAnim > 0.06){
+     // Pop / stretch phase
+     p.squash = 1.18;
+   } else {
+     // Settle back to normal
+     p.squash = 1 + (p.squash - 1) * 0.6;
+   }
+   if(p.landAnim <= 0){ p.landAnim = 0; p.squash = 1; }
+ } else {
+   p.squash = 1;
+ }
+ // camera follows player
+ const target=H*.36;
+ if(p.y<target){
+   const d=target-p.y;p.y=target;game.scroll+=d;
+   game.platforms.forEach(pl=>{
+     pl.y+=d;
+     if(pl.type === "moverV") pl.baseY += d;   // keep vertical movers in sync
+     if(pl.type === "moverH") pl.pathY += d;
+   });
+   game.coins.forEach(c=>c.y+=d);
+   game.score=Math.floor(game.score+d);
+ }
+ // generate upward – always relative to the highest (lowest Y) platform
+ let minY=Math.min(...game.platforms.map(p=>p.y));
+ while(minY>-120){
+   const nextY = minY - rand(75,115);
+   addPlatform(nextY);
+   minY = Math.min(...game.platforms.map(p=>p.y));
+ }
+ // remove low objects
+ game.platforms=game.platforms.filter(pl=>pl.y<H+60);
+ game.coins=game.coins.filter(c=>{
+   if(c.y>H+60)return false;
+   const dx=c.x-(p.x+p.w/2),dy=c.y-(p.y+p.h/2);
+   if(dx*dx+dy*dy<18*18){state.coins++;save();coinPopup(c.x,c.y);spawnParticles(c.x,c.y,10);return false}
+   return true;
+ });
+ while(game.coins.length<8)addCoin(rand(25,W-25),rand(50,H-150));
+ // particles
+ game.particles.forEach(q=>{q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=400*dt;q.life-=dt});
+ game.particles=game.particles.filter(q=>q.life>0);
+ if(p.y>H+80) endGame();
+ if(game.score>state.best){
+   $("scoreHud").textContent="NEW BEST "+game.score;
+   $("scoreHud").style.color="#62d46b";
+ }else{
+   $("scoreHud").textContent="SCORE "+game.score;
+   $("scoreHud").style.color="#fff";
+ }
+ $("coinsHud").textContent="● "+state.coins;
+}
+function endGame(){
+ game.running=false;
+ if(game.score>state.best){state.best=game.score;save()}
+ $("finalScore").textContent="SCORE "+game.score;
+ $("bestScore").textContent=state.best;
+ show("gameOver");
+}
+function drawBackground(){
+ ctx.fillStyle="#182442";ctx.fillRect(0,0,W,H);
+ const off=(game.scroll*.12)%90;
+ for(let y=-40;y<H+50;y+=90){
+   for(let x=20;x<W;x+=100){
+     const yy=y+off+(x%3)*8;
+     ctx.fillStyle="#26365a";
+     ctx.fillRect(x,yy,4,4);ctx.fillRect(x+6,yy+3,3,3);
+   }
+ }
+ ctx.fillStyle="#1d2d4e";
+ for(let x=0;x<W;x+=52){let hh=25+((x*7)%50);ctx.fillRect(x,H-hh,45,hh)}
+}
+
+function drawPathLines(pl){
+  // Subtle dashed path so the player can anticipate movement
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,0.22)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 6]);
+
+  if(pl.type === "moverH"){
+    // Horizontal path line at the platform's current Y
+    const y = Math.round(pl.y + pl.h / 2);
+    ctx.beginPath();
+    ctx.moveTo(pl.minX, y);
+    ctx.lineTo(pl.maxX + pl.w, y);
+    ctx.stroke();
+
+    // Small tick marks at ends
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(pl.minX, y - 4); ctx.lineTo(pl.minX, y + 4);
+    ctx.moveTo(pl.maxX + pl.w, y - 4); ctx.lineTo(pl.maxX + pl.w, y + 4);
+    ctx.stroke();
+  } else if(pl.type === "moverV"){
+    // Vertical path line at the fixed X
+    const x = Math.round(pl.fixedX + pl.w / 2);
+    const top = pl.baseY - pl.amp;
+    const bot = pl.baseY + pl.amp + pl.h;
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bot);
+    ctx.stroke();
+
+    // Tick marks at extremes
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(x - 4, top); ctx.lineTo(x + 4, top);
+    ctx.moveTo(x - 4, bot); ctx.lineTo(x + 4, bot);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawPlatform(pl){
+ if(pl.used&&pl.type==="break"&&pl.breakTime<=0)return;
+
+ // Draw path lines first (behind the platform)
+ if(pl.type === "moverH" || pl.type === "moverV"){
+   drawPathLines(pl);
+ }
+
+ if(pl.type==="solid"){
+   ctx.fillStyle="#4f9f5f";ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
+   ctx.fillStyle="#78d36f";ctx.fillRect(pl.x,pl.y,pl.w,4);
+   ctx.fillStyle="#2d6c45";ctx.fillRect(pl.x+7,pl.y+8,pl.w-14,3);
+  }else if(pl.type==="break"){
+   const falling=pl.used;
+   ctx.fillStyle="#a86b49";
+   if(!falling){ctx.fillRect(pl.x,pl.y,pl.w,pl.h);ctx.fillStyle="#df9a62";ctx.fillRect(pl.x,pl.y,pl.w,4);}
+   ctx.fillStyle="#6e463b";for(let x=pl.x+12;x<pl.x+pl.w-4;x+=24)ctx.fillRect(x,pl.y+5,5,7);
+ }else if(pl.type==="spring"){
+   ctx.fillStyle="#3e87bb";ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
+   ctx.fillStyle="#76d8ee";ctx.fillRect(pl.x,pl.y,pl.w,4);
+   ctx.fillStyle="#e7e7ef";
+   ctx.fillRect(pl.x+pl.w/2-20,pl.y-8,40,4);
+   ctx.fillRect(pl.x+pl.w/2-15,pl.y-12,30,4);
+   ctx.fillStyle="#d75b72";
+   ctx.fillRect(pl.x+pl.w/2-10,pl.y-16,20,4);
+ }else if(pl.type==="moverH"){
+   // Purple horizontal mover
+   ctx.fillStyle="#9b3db8";ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
+   ctx.fillStyle="#d06be8";ctx.fillRect(pl.x,pl.y,pl.w,4);
+   ctx.fillStyle="#6a2a82";ctx.fillRect(pl.x+6,pl.y+7,pl.w-12,4);
+   // Direction indicator arrows
+   ctx.fillStyle="#ffe36e";
+   if(pl.dir > 0){
+     ctx.fillRect(pl.x + pl.w - 12, pl.y + 5, 6, 4);
+   } else {
+     ctx.fillRect(pl.x + 6, pl.y + 5, 6, 4);
+   }
+ }else if(pl.type==="moverV"){
+   // Orange vertical mover
+   ctx.fillStyle="#c47a28";ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
+   ctx.fillStyle="#f0b45a";ctx.fillRect(pl.x,pl.y,pl.w,4);
+   ctx.fillStyle="#8a5418";ctx.fillRect(pl.x+6,pl.y+7,pl.w-12,4);
+   // Up/down dots
+   ctx.fillStyle="#ffe36e";
+   ctx.fillRect(pl.x + pl.w/2 - 2, pl.y + 5, 4, 4);
+ }
+}
+function drawCoin(c){
+ const s=Math.abs(Math.sin(c.spin))*2;
+ ctx.fillStyle="#ffe36e";ctx.fillRect(c.x-5-s,c.y-7,10+2*s,14);
+ ctx.fillStyle="#fff3a2";ctx.fillRect(c.x-2,c.y-5,4,10);
+}
+function drawPlayer(){
+ const p=game.player;
+ const baseX = Math.round(p.x);
+ const baseY = Math.round(p.y);
+ const sq = p.squash || 1;          // <1 = crouch, >1 = stretch
+ const invSq = 1 / sq;              // horizontal compensate so volume feels conserved
+ // Anchor at the feet so the character squishes into the platform
+ const footY = baseY + p.h;
+ const drawH = p.h * sq;
+ const drawY = footY - drawH;
+ const midX = baseX + p.w / 2;
+ const drawW = p.w * invSq;
+ const x = Math.round(midX - drawW / 2);
+ const y = Math.round(drawY);
+ const scaleX = invSq;
+ const scaleY = sq;
+
+ // Helper: scale a local offset relative to the unscaled character box
+ function sx(lx){ return Math.round(midX + (lx - p.w/2) * scaleX); }
+ function sy(ly){ return Math.round(footY + (ly - p.h) * scaleY); }
+ function sw(w){ return Math.max(1, Math.round(w * scaleX)); }
+ function sh(h){ return Math.max(1, Math.round(h * scaleY)); }
+
+ // shadow (always flat under the feet)
+ ctx.fillStyle="#0c1225";
+ ctx.fillRect(Math.round(midX - 9), footY + 2, 18, 4);
+
+ // pants
+ const pants=({Denim:"#435f9b",Black:"#202338",Cream:"#e7d39c",Purple:"#69459d",Green:"#4e9a63",Red:"#a94450"})[state.equipped.pants]||"#435f9b";
+ ctx.fillStyle=pants;
+ ctx.fillRect(sx(5), sy(22), sw(7), sh(11));
+ ctx.fillRect(sx(15), sy(22), sw(7), sh(11));
+ // shirt
+ const shirt=({Blue:"#4e8eea",Red:"#d95858",Mint:"#5bd1ad",Gold:"#e8bd45",Purple:"#8d5bd6",White:"#e8edf5"})[state.equipped.shirt]||"#4e8eea";
+ ctx.fillStyle=shirt;
+ ctx.fillRect(sx(4), sy(12), sw(19), sh(13));
+ // arms
+ ctx.fillStyle="#e9b77e";
+ ctx.fillRect(sx(0), sy(14), sw(5), sh(11));
+ ctx.fillRect(sx(22), sy(14), sw(5), sh(11));
+ // face
+ ctx.fillStyle="#e9b77e";
+ ctx.fillRect(sx(5), sy(3), sw(17), sh(13));
+ // hair
+ const hair=state.equipped.hair;
+ const hc=({Classic:"#6b3b25",Spiky:"#6b3b25","Green Tips":"#62d46b",Purple:"#a56de2",Blue:"#5fa9e8",Mohawk:"#e85d72"})[hair]||"#6b3b25";
+ ctx.fillStyle=hc;
+ if(hair==="Spiky"){
+   ctx.fillRect(sx(5), sy(0), sw(17), sh(6));
+   ctx.fillRect(sx(3), sy(3), sw(21), sh(5));
+   ctx.fillRect(sx(8), sy(-4), sw(4), sh(5));
+   ctx.fillRect(sx(15), sy(-5), sw(4), sh(6));
+ }else if(hair==="Mohawk"){
+   ctx.fillRect(sx(10), sy(-6), sw(7), sh(12));
+   ctx.fillRect(sx(4), sy(0), sw(19), sh(5));
+ }else{
+   ctx.fillRect(sx(4), sy(0), sw(19), sh(7));
+   ctx.fillRect(sx(2), sy(4), sw(6), sh(7));
+ }
+ // eyes
+ ctx.fillStyle="#182442";
+ ctx.fillRect(sx(9), sy(9), sw(3), sh(3));
+ ctx.fillRect(sx(17), sy(9), sw(3), sh(3));
+ // glasses
+ const g=state.equipped.glasses;
+ if(g!=="None"){
+   ctx.strokeStyle=({Square:"#9de6ff","Red Frames":"#e65b66","Star Lens":"#ffe36e","Green Lens":"#65e08b"})[g];
+   ctx.lineWidth=2;
+   ctx.strokeRect(sx(6), sy(7), sw(7), sh(6));
+   ctx.strokeRect(sx(15), sy(7), sw(7), sh(6));
+   ctx.beginPath();
+   ctx.moveTo(sx(13), sy(9));
+   ctx.lineTo(sx(15), sy(9));
+   ctx.stroke();
+ }
+ // hat
+ const hat=state.equipped.hat;
+ if(hat==="Beanie"){
+   ctx.fillStyle="#e85d72";
+   ctx.fillRect(sx(4), sy(-5), sw(19), sh(7));
+   ctx.fillRect(sx(8), sy(-9), sw(11), sh(5));
+ }
+ if(hat==="Cap"){
+   ctx.fillStyle="#5fc4a4";
+   ctx.fillRect(sx(4), sy(-4), sw(18), sh(5));
+   ctx.fillRect(sx(18), sy(0), sw(8), sh(3));
+ }
+ if(hat==="Crown"){
+   ctx.fillStyle="#ffe36e";
+   ctx.fillRect(sx(5), sy(-7), sw(18), sh(5));
+   ctx.fillRect(sx(6), sy(-10), sw(4), sh(4));
+   ctx.fillRect(sx(12), sy(-12), sw(4), sh(6));
+   ctx.fillRect(sx(18), sy(-10), sw(4), sh(4));
+ }
+ if(hat==="Wizard"){
+   ctx.fillStyle="#7351b8";
+   ctx.fillRect(sx(4), sy(-6), sw(19), sh(4));
+   ctx.fillRect(sx(8), sy(-13), sw(11), sh(8));
+ }
+ if(hat==="Halo"){
+   ctx.strokeStyle="#fff1a8";
+   ctx.lineWidth=3;
+   ctx.strokeRect(sx(5), sy(-9), sw(18), sh(4));
+ }
+ // backpack
+ const b=state.equipped.backpack;
+ if(b!=="None"){
+   ctx.fillStyle=({"Tiny Pack":"#e07b50","Blue Pack":"#4e8eea"})[b];
+   ctx.fillRect(sx(-3), sy(14), sw(5), sh(13));
+ }
+ // shoes
+ const shoe=state.equipped.shoes;
+ if(shoe==="Red Kicks")ctx.fillStyle="#d95858";
+ else if(shoe==="Golden Boots")ctx.fillStyle="#e8bd45";
+ else ctx.fillStyle="#e8edf5";
+ ctx.fillRect(sx(3), sy(31), sw(10), sh(4));
+ ctx.fillRect(sx(14), sy(31), sw(10), sh(4));
+}
+function draw(){
+ drawBackground();
+ for(const pl of game.platforms)drawPlatform(pl);
+ for(const c of game.coins)drawCoin(c);
+ for(const q of game.particles){
+   ctx.fillStyle=q.break?"#df9a62":"#ffe36e";
+   ctx.fillRect(q.x,q.y,q.break?6:4,q.break?5:4);
+ }
+ if(game.player)drawPlayer();
+ if(game.running){
+   ctx.fillStyle="rgba(8,11,22,.55)";ctx.fillRect(W/2-115,H-30,230,20);
+   ctx.fillStyle="#dbe7ff";ctx.font="12px Courier New";ctx.textAlign="center";ctx.fillText("←  MOVE  →",W/2,H-16);
+ }
+}
+function loop(t){
+ if(!game.running)return;
+ const dt=Math.min(.033,(t-game.last)/1000);game.last=t;
+ update(dt);draw();
+ if(game.running)requestAnimationFrame(loop);
+}
+draw();
+show("menu");
+})();
+</script>
+</body>
+</html>
