@@ -1,0 +1,3085 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Tetris</title>
+
+<style>
+
+/* =====================================================
+   THEMES
+===================================================== */
+
+:root {
+
+    --darkest: #0f380f;
+    --dark: #306230;
+    --medium: #8bac0f;
+    --light: #9bbc0f;
+
+}
+
+
+/* =====================================================
+   MONOCHROME
+===================================================== */
+
+body.monochrome {
+
+    --darkest: #111111;
+    --dark: #444444;
+    --medium: #aaaaaa;
+    --light: #dddddd;
+
+}
+
+
+/* =====================================================
+   COLOR EASTER EGG
+===================================================== */
+
+body.color-mode {
+
+    --darkest: #17202a;
+    --dark: #34495e;
+    --medium: #95a5a6;
+    --light: #ecf0f1;
+
+}
+
+
+/* =====================================================
+   PAGE
+===================================================== */
+
+* {
+
+    box-sizing: border-box;
+
+}
+
+
+body {
+
+    margin: 0;
+
+    min-height: 100vh;
+
+    background: #202124;
+
+    font-family:
+        "Courier New",
+        monospace;
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    padding: 20px;
+
+}
+
+
+/* =====================================================
+   GAME BOY
+===================================================== */
+
+.gameboy {
+
+    width: 650px;
+
+    max-width: 95vw;
+
+    background: var(--light);
+
+    border: 8px solid var(--dark);
+
+    border-radius: 18px;
+
+    padding: 25px;
+
+    box-shadow:
+        0 15px 40px
+        rgba(0,0,0,.6);
+
+}
+
+
+/* =====================================================
+   LOGO
+===================================================== */
+
+.logo {
+
+    text-align: center;
+
+    font-family: Arial, sans-serif;
+
+    font-weight: 900;
+
+    font-style: italic;
+
+    font-size: 44px;
+
+    letter-spacing: -3px;
+
+    margin-bottom: 18px;
+
+    color: var(--darkest);
+
+}
+
+
+/* =====================================================
+   SCREEN
+===================================================== */
+
+.screen {
+
+    background: var(--medium);
+
+    border: 10px solid var(--dark);
+
+    padding: 12px;
+
+    display: flex;
+
+    justify-content: center;
+
+    min-height: 500px;
+
+    position: relative;
+
+}
+
+
+/* =====================================================
+   HIDDEN
+===================================================== */
+
+.hidden {
+
+    display: none !important;
+
+}
+
+
+/* =====================================================
+   MAIN MENU
+===================================================== */
+
+.menu {
+
+    width: 100%;
+
+    min-height: 450px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    align-items: center;
+
+    text-align: center;
+
+    color: var(--darkest);
+
+}
+
+
+.menu-title {
+
+    font-size: 34px;
+
+    font-weight: bold;
+
+    margin-bottom: 25px;
+
+}
+
+
+/* =====================================================
+   DISPLAY SELECTOR
+===================================================== */
+
+.theme-title {
+
+    font-weight: bold;
+
+    font-size: 14px;
+
+    margin-bottom: 8px;
+
+}
+
+
+.theme-buttons {
+
+    display: flex;
+
+    gap: 8px;
+
+    margin-bottom: 25px;
+
+    justify-content: center;
+
+    flex-wrap: wrap;
+
+}
+
+
+.theme-button {
+
+    padding: 9px 12px;
+
+    font-family:
+        "Courier New",
+        monospace;
+
+    font-weight: bold;
+
+    border: 3px solid var(--darkest);
+
+    background: var(--light);
+
+    color: var(--darkest);
+
+    cursor: pointer;
+
+}
+
+
+.theme-button:hover {
+
+    background: var(--dark);
+
+    color: var(--light);
+
+}
+
+
+.theme-button.selected {
+
+    background: var(--darkest);
+
+    color: var(--light);
+
+}
+
+
+/* =====================================================
+   SECRET COLOR BUTTON
+===================================================== */
+
+.secret-color {
+
+    animation:
+        secretAppear
+        0.5s ease;
+
+}
+
+
+@keyframes secretAppear {
+
+    from {
+
+        opacity: 0;
+
+        transform:
+            scale(0.5);
+
+    }
+
+    to {
+
+        opacity: 1;
+
+        transform:
+            scale(1);
+
+    }
+
+}
+
+
+/* =====================================================
+   MENU BUTTONS
+===================================================== */
+
+.menu-option {
+
+    width: 250px;
+
+    max-width: 90%;
+
+    margin: 8px auto;
+
+    padding: 13px;
+
+    font-family:
+        "Courier New",
+        monospace;
+
+    font-size: 20px;
+
+    font-weight: bold;
+
+    color: var(--light);
+
+    background: var(--darkest);
+
+    border: 4px solid var(--darkest);
+
+    cursor: pointer;
+
+}
+
+
+.menu-option:hover {
+
+    background: var(--dark);
+
+}
+
+
+/* =====================================================
+   INSTRUCTIONS
+===================================================== */
+
+.instructions {
+
+    width: 100%;
+
+    min-height: 450px;
+
+    color: var(--darkest);
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    text-align: center;
+
+}
+
+
+.instructions h2 {
+
+    margin-top: 0;
+
+    margin-bottom: 25px;
+
+}
+
+
+.control-table {
+
+    line-height: 1.9;
+
+    font-size: 15px;
+
+}
+
+
+.back {
+
+    width: 250px;
+
+    margin-top: 30px;
+
+    padding: 12px;
+
+    font-family:
+        "Courier New",
+        monospace;
+
+    font-size: 18px;
+
+    font-weight: bold;
+
+    background: var(--darkest);
+
+    color: var(--light);
+
+    border: 4px solid var(--darkest);
+
+    cursor: pointer;
+
+}
+
+
+.back:hover {
+
+    background: var(--dark);
+
+}
+
+
+/* =====================================================
+   GAME
+===================================================== */
+
+.game {
+
+    display: flex;
+
+    gap: 18px;
+
+    align-items: flex-start;
+
+}
+
+
+#gameCanvas {
+
+    background: var(--medium);
+
+    border: 4px solid var(--darkest);
+
+    image-rendering: pixelated;
+
+    image-rendering: crisp-edges;
+
+}
+
+
+/* =====================================================
+   SIDE PANEL
+===================================================== */
+
+.side-panel {
+
+    width: 150px;
+
+    color: var(--darkest);
+
+    font-size: 14px;
+
+}
+
+
+.panel-title {
+
+    font-weight: bold;
+
+    margin-top: 5px;
+
+    margin-bottom: 5px;
+
+}
+
+
+.panel-value {
+
+    background: var(--darkest);
+
+    color: var(--light);
+
+    padding: 6px;
+
+    margin-bottom: 18px;
+
+    font-size: 17px;
+
+    text-align: right;
+
+}
+
+
+/* =====================================================
+   NEXT PIECE
+===================================================== */
+
+.next-box {
+
+    border: 3px solid var(--darkest);
+
+    padding: 5px;
+
+    margin-bottom: 18px;
+
+}
+
+
+#nextCanvas {
+
+    display: block;
+
+    margin: auto;
+
+    background: var(--medium);
+
+}
+
+
+/* =====================================================
+   GAME BUTTONS
+===================================================== */
+
+.game-button {
+
+    width: 100%;
+
+    margin-top: 8px;
+
+    padding: 8px;
+
+    font-family:
+        "Courier New",
+        monospace;
+
+    font-weight: bold;
+
+    background: var(--darkest);
+
+    color: var(--light);
+
+    border: 3px solid var(--darkest);
+
+    cursor: pointer;
+
+}
+
+
+.game-button:hover {
+
+    background: var(--dark);
+
+}
+
+
+/* =====================================================
+   GAME OVER
+===================================================== */
+
+.game-over {
+
+    width: 100%;
+
+    min-height: 450px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    align-items: center;
+
+    text-align: center;
+
+    color: var(--darkest);
+
+}
+
+
+.game-over-title {
+
+    font-size: 42px;
+
+    font-weight: 900;
+
+    margin-bottom: 12px;
+
+}
+
+
+.final-score {
+
+    font-size: 18px;
+
+    margin-bottom: 30px;
+
+}
+
+
+.game-over-button {
+
+    width: 250px;
+
+    max-width: 90%;
+
+    margin: 7px;
+
+    padding: 13px;
+
+    font-family:
+        "Courier New",
+        monospace;
+
+    font-size: 19px;
+
+    font-weight: bold;
+
+    background: var(--darkest);
+
+    color: var(--light);
+
+    border: 4px solid var(--darkest);
+
+    cursor: pointer;
+
+}
+
+
+.game-over-button:hover {
+
+    background: var(--dark);
+
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 650px) {
+
+    .game {
+
+        flex-direction: column;
+
+        align-items: center;
+
+    }
+
+
+    .side-panel {
+
+        width: 100%;
+
+        display: grid;
+
+        grid-template-columns:
+            1fr 1fr;
+
+        gap: 8px;
+
+    }
+
+
+    .panel-value {
+
+        margin-bottom: 5px;
+
+    }
+
+
+    .next-box {
+
+        margin-bottom: 5px;
+
+    }
+
+
+    .logo {
+
+        font-size: 34px;
+
+    }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="gameboy">
+
+
+    <div class="logo">
+
+        TETRIS
+
+    </div>
+
+
+    <div class="screen">
+
+
+        <!-- =================================================
+             MAIN MENU
+        ================================================== -->
+
+        <div
+            id="menu"
+            class="menu">
+
+
+            <div class="menu-title">
+
+                TETRIS
+
+            </div>
+
+
+            <div class="theme-title">
+
+                DISPLAY
+
+            </div>
+
+
+            <div class="theme-buttons">
+
+
+                <button
+                    id="greenTheme"
+                    class="theme-button selected">
+
+                    GREEN & BLACK
+
+                </button>
+
+
+                <button
+                    id="monoTheme"
+                    class="theme-button">
+
+                    MONOCHROME
+
+                </button>
+
+
+                <!-- SECRET BUTTON -->
+
+                <button
+                    id="colorTheme"
+                    class="theme-button hidden">
+
+                    COLOR
+
+                </button>
+
+
+            </div>
+
+
+            <button
+                id="startButton"
+                class="menu-option">
+
+                START
+
+            </button>
+
+
+            <button
+                id="instructionsButton"
+                class="menu-option">
+
+                HOW TO PLAY
+
+            </button>
+
+
+        </div>
+
+
+        <!-- =================================================
+             HOW TO PLAY
+        ================================================== -->
+
+        <div
+            id="instructions"
+            class="instructions hidden">
+
+
+            <h2>
+
+                HOW TO PLAY
+
+            </h2>
+
+
+            <div class="control-table">
+
+                ↑ / W
+                = ROTATE
+
+                <br>
+
+                ← / A
+                = MOVE LEFT
+
+                <br>
+
+                → / D
+                = MOVE RIGHT
+
+                <br>
+
+                ↓ / S
+                = FAST FALL
+
+                <br><br>
+
+                P
+                = PAUSE
+
+                <br><br>
+
+                Complete an entire row<br>
+                to clear it.
+
+            </div>
+
+
+            <button
+                id="backButton"
+                class="back">
+
+                BACK
+
+            </button>
+
+
+        </div>
+
+
+        <!-- =================================================
+             GAME
+        ================================================== -->
+
+        <div
+            id="game"
+            class="game hidden">
+
+
+            <canvas
+                id="gameCanvas"
+                width="300"
+                height="600">
+            </canvas>
+
+
+            <div class="side-panel">
+
+
+                <div class="panel-title">
+
+                    SCORE
+
+                </div>
+
+
+                <div
+                    id="score"
+                    class="panel-value">
+
+                    000000
+
+                </div>
+
+
+                <div class="panel-title">
+
+                    LINES
+
+                </div>
+
+
+                <div
+                    id="lines"
+                    class="panel-value">
+
+                    000
+
+                </div>
+
+
+                <div class="panel-title">
+
+                    LEVEL
+
+                </div>
+
+
+                <div
+                    id="level"
+                    class="panel-value">
+
+                    01
+
+                </div>
+
+
+                <div class="panel-title">
+
+                    NEXT
+
+                </div>
+
+
+                <div class="next-box">
+
+                    <canvas
+                        id="nextCanvas"
+                        width="100"
+                        height="100">
+                    </canvas>
+
+                </div>
+
+
+                <button
+                    id="pauseButton"
+                    class="game-button">
+
+                    PAUSE
+
+                </button>
+
+
+                <button
+                    id="quitButton"
+                    class="game-button">
+
+                    QUIT
+
+                </button>
+
+
+            </div>
+
+
+        </div>
+
+
+        <!-- =================================================
+             GAME OVER
+        ================================================== -->
+
+        <div
+            id="gameOver"
+            class="game-over hidden">
+
+
+            <div class="game-over-title">
+
+                GAME OVER
+
+            </div>
+
+
+            <div
+                id="finalScore"
+                class="final-score">
+
+                SCORE: 000000
+
+            </div>
+
+
+            <button
+                id="restartButton"
+                class="game-over-button">
+
+                RESTART
+
+            </button>
+
+
+            <button
+                id="mainMenuButton"
+                class="game-over-button">
+
+                MAIN MENU
+
+            </button>
+
+
+        </div>
+
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =====================================================
+   CANVAS
+===================================================== */
+
+const canvas =
+    document.getElementById(
+        "gameCanvas"
+    );
+
+const ctx =
+    canvas.getContext("2d");
+
+
+const nextCanvas =
+    document.getElementById(
+        "nextCanvas"
+    );
+
+const nextCtx =
+    nextCanvas.getContext("2d");
+
+
+/* =====================================================
+   BOARD
+===================================================== */
+
+const COLS = 10;
+
+const ROWS = 20;
+
+const BLOCK = 30;
+
+
+/* =====================================================
+   GREEN & BLACK COLORS
+=====================================================
+
+   The L piece and T piece have been
+   changed so they don't blend into
+   the background.
+===================================================== */
+
+const GREEN_COLORS = [
+
+    null,
+
+    "#0f380f",
+
+    "#306230",
+
+    "#9bbc0f",
+
+    "#0b2a0b",
+
+    "#7a9608",
+
+    "#244a24",
+
+    "#6f8507"
+
+];
+
+
+/* =====================================================
+   MONOCHROME COLORS
+===================================================== */
+
+const MONO_COLORS = [
+
+    null,
+
+    "#111111",
+
+    "#222222",
+
+    "#333333",
+
+    "#444444",
+
+    "#555555",
+
+    "#666666",
+
+    "#777777"
+
+];
+
+
+/* =====================================================
+   COLOR EASTER EGG COLORS
+===================================================== */
+
+const COLOR_COLORS = [
+
+    null,
+
+    "#00bcd4",
+
+    "#1565c0",
+
+    "#f39c12",
+
+    "#f1c40f",
+
+    "#2ecc71",
+
+    "#e74c3c",
+
+    "#9b59b6"
+
+];
+
+
+/* =====================================================
+   PIECES
+===================================================== */
+
+const PIECES = [
+
+    /* I */
+
+    [
+
+        [0,0,0,0],
+
+        [1,1,1,1],
+
+        [0,0,0,0],
+
+        [0,0,0,0]
+
+    ],
+
+
+    /* L */
+
+    [
+
+        [2,0,0],
+
+        [2,2,2],
+
+        [0,0,0]
+
+    ],
+
+
+    /* J */
+
+    [
+
+        [0,0,3],
+
+        [3,3,3],
+
+        [0,0,0]
+
+    ],
+
+
+    /* O */
+
+    [
+
+        [4,4],
+
+        [4,4]
+
+    ],
+
+
+    /* S */
+
+    [
+
+        [0,5,5],
+
+        [5,5,0],
+
+        [0,0,0]
+
+    ],
+
+
+    /* Z */
+
+    [
+
+        [6,6,0],
+
+        [0,6,6],
+
+        [0,0,0]
+
+    ],
+
+
+    /* T */
+
+    [
+
+        [0,7,0],
+
+        [7,7,7],
+
+        [0,0,0]
+
+    ]
+
+];
+
+
+/* =====================================================
+   GAME VARIABLES
+===================================================== */
+
+let board;
+
+let player;
+
+let nextPiece;
+
+let score = 0;
+
+let lines = 0;
+
+let level = 1;
+
+let dropCounter = 0;
+
+let lastTime = 0;
+
+let dropInterval = 800;
+
+let animationID;
+
+let playing = false;
+
+let paused = false;
+
+let fastFalling = false;
+
+
+/* =====================================================
+   MENU EASTER EGG
+===================================================== */
+
+let menuActivityTimer = null;
+
+let colorUnlocked = false;
+
+
+/* =====================================================
+   ELEMENTS
+===================================================== */
+
+const menu =
+    document.getElementById(
+        "menu"
+    );
+
+const instructions =
+    document.getElementById(
+        "instructions"
+    );
+
+const game =
+    document.getElementById(
+        "game"
+    );
+
+const gameOverScreen =
+    document.getElementById(
+        "gameOver"
+    );
+
+
+const scoreElement =
+    document.getElementById(
+        "score"
+    );
+
+const linesElement =
+    document.getElementById(
+        "lines"
+    );
+
+const levelElement =
+    document.getElementById(
+        "level"
+    );
+
+
+/* =====================================================
+   START EASTER EGG TIMER
+===================================================== */
+
+function startSecretTimer() {
+
+    clearTimeout(
+        menuActivityTimer
+    );
+
+
+    menuActivityTimer =
+        setTimeout(
+            unlockColorMode,
+            30000
+        );
+
+}
+
+
+/* =====================================================
+   UNLOCK COLOR
+===================================================== */
+
+function unlockColorMode() {
+
+    if (
+        colorUnlocked
+    ) {
+
+        return;
+
+    }
+
+
+    colorUnlocked = true;
+
+
+    const colorButton =
+        document.getElementById(
+            "colorTheme"
+        );
+
+
+    colorButton.classList.remove(
+        "hidden"
+    );
+
+
+    colorButton.classList.add(
+        "secret-color"
+    );
+
+}
+
+
+/* =====================================================
+   RESET SECRET TIMER
+===================================================== */
+
+function resetSecretTimer() {
+
+    if (
+        !menu.classList.contains(
+            "hidden"
+        )
+    ) {
+
+        startSecretTimer();
+
+    }
+
+}
+
+
+/* =====================================================
+   MAIN MENU ACTIVITY
+===================================================== */
+
+document.addEventListener(
+    "mousemove",
+    resetSecretTimer
+);
+
+
+document.addEventListener(
+    "keydown",
+    resetSecretTimer
+);
+
+
+/* =====================================================
+   THEME FUNCTIONS
+===================================================== */
+
+function setTheme(
+    theme
+) {
+
+    document.body.classList.remove(
+        "monochrome",
+        "color-mode"
+    );
+
+
+    if (
+        theme === "monochrome"
+    ) {
+
+        document.body.classList.add(
+            "monochrome"
+        );
+
+    }
+
+
+    if (
+        theme === "color"
+    ) {
+
+        document.body.classList.add(
+            "color-mode"
+        );
+
+    }
+
+
+    document
+        .getElementById(
+            "greenTheme"
+        )
+        .classList.remove(
+            "selected"
+        );
+
+
+    document
+        .getElementById(
+            "monoTheme"
+        )
+        .classList.remove(
+            "selected"
+        );
+
+
+    document
+        .getElementById(
+            "colorTheme"
+        )
+        .classList.remove(
+            "selected"
+        );
+
+
+    if (
+        theme === "green"
+    ) {
+
+        document
+            .getElementById(
+                "greenTheme"
+            )
+            .classList.add(
+                "selected"
+            );
+
+    }
+
+
+    if (
+        theme === "monochrome"
+    ) {
+
+        document
+            .getElementById(
+                "monoTheme"
+            )
+            .classList.add(
+                "selected"
+            );
+
+    }
+
+
+    if (
+        theme === "color"
+    ) {
+
+        document
+            .getElementById(
+                "colorTheme"
+            )
+            .classList.add(
+                "selected"
+            );
+
+    }
+
+}
+
+
+/* =====================================================
+   THEME BUTTONS
+===================================================== */
+
+document
+    .getElementById(
+        "greenTheme"
+    )
+    .onclick =
+    function() {
+
+        setTheme(
+            "green"
+        );
+
+        startSecretTimer();
+
+    };
+
+
+document
+    .getElementById(
+        "monoTheme"
+    )
+    .onclick =
+    function() {
+
+        setTheme(
+            "monochrome"
+        );
+
+        startSecretTimer();
+
+    };
+
+
+document
+    .getElementById(
+        "colorTheme"
+    )
+    .onclick =
+    function() {
+
+        if (
+            colorUnlocked
+        ) {
+
+            setTheme(
+                "color"
+            );
+
+            startSecretTimer();
+
+        }
+
+    };
+
+
+/* =====================================================
+   START BUTTON
+===================================================== */
+
+document
+    .getElementById(
+        "startButton"
+    )
+    .onclick =
+    function() {
+
+        clearTimeout(
+            menuActivityTimer
+        );
+
+        startGame();
+
+    };
+
+
+/* =====================================================
+   HOW TO PLAY
+===================================================== */
+
+document
+    .getElementById(
+        "instructionsButton"
+    )
+    .onclick =
+    function() {
+
+        clearTimeout(
+            menuActivityTimer
+        );
+
+
+        menu.classList.add(
+            "hidden"
+        );
+
+
+        instructions.classList.remove(
+            "hidden"
+        );
+
+    };
+
+
+/* =====================================================
+   BACK
+===================================================== */
+
+document
+    .getElementById(
+        "backButton"
+    )
+    .onclick =
+    function() {
+
+        instructions.classList.add(
+            "hidden"
+        );
+
+
+        menu.classList.remove(
+            "hidden"
+        );
+
+
+        startSecretTimer();
+
+    };
+
+
+/* =====================================================
+   START GAME
+===================================================== */
+
+function startGame() {
+
+    board =
+        createBoard();
+
+
+    score = 0;
+
+    lines = 0;
+
+    level = 1;
+
+    dropInterval = 800;
+
+    dropCounter = 0;
+
+    lastTime = 0;
+
+    playing = true;
+
+    paused = false;
+
+    fastFalling = false;
+
+
+    updateScore();
+
+
+    nextPiece =
+        randomPiece();
+
+
+    player =
+        createPlayer();
+
+
+    menu.classList.add(
+        "hidden"
+    );
+
+
+    instructions.classList.add(
+        "hidden"
+    );
+
+
+    gameOverScreen.classList.add(
+        "hidden"
+    );
+
+
+    game.classList.remove(
+        "hidden"
+    );
+
+
+    drawNext();
+
+
+    cancelAnimationFrame(
+        animationID
+    );
+
+
+    animationID =
+        requestAnimationFrame(
+            update
+        );
+
+}
+
+
+/* =====================================================
+   CREATE BOARD
+===================================================== */
+
+function createBoard() {
+
+    const newBoard = [];
+
+
+    for (
+        let y = 0;
+        y < ROWS;
+        y++
+    ) {
+
+        newBoard.push(
+            new Array(
+                COLS
+            ).fill(0)
+        );
+
+    }
+
+
+    return newBoard;
+
+}
+
+
+/* =====================================================
+   RANDOM PIECE
+===================================================== */
+
+function randomPiece() {
+
+    const index =
+        Math.floor(
+            Math.random() *
+            PIECES.length
+        );
+
+
+    return {
+
+        matrix:
+            copyMatrix(
+                PIECES[index]
+            ),
+
+        type:
+            index + 1
+
+    };
+
+}
+
+
+/* =====================================================
+   CREATE PLAYER
+===================================================== */
+
+function createPlayer() {
+
+    const piece =
+        nextPiece;
+
+
+    nextPiece =
+        randomPiece();
+
+
+    return {
+
+        matrix:
+            piece.matrix,
+
+        type:
+            piece.type,
+
+        pos: {
+
+            x:
+                Math.floor(
+                    COLS / 2
+                )
+                -
+                Math.ceil(
+                    piece.matrix[0].length / 2
+                ),
+
+            y: 0
+
+        }
+
+    };
+
+}
+
+
+/* =====================================================
+   COPY MATRIX
+===================================================== */
+
+function copyMatrix(
+    matrix
+) {
+
+    return matrix.map(
+        row =>
+            row.slice()
+    );
+
+}
+
+
+/* =====================================================
+   GET BLOCK COLORS
+===================================================== */
+
+function getColors() {
+
+    if (
+        document.body.classList.contains(
+            "color-mode"
+        )
+    ) {
+
+        return COLOR_COLORS;
+
+    }
+
+
+    if (
+        document.body.classList.contains(
+            "monochrome"
+        )
+    ) {
+
+        return MONO_COLORS;
+
+    }
+
+
+    return GREEN_COLORS;
+
+}
+
+
+/* =====================================================
+   SCREEN COLOR
+===================================================== */
+
+function getScreenColor() {
+
+    if (
+        document.body.classList.contains(
+            "color-mode"
+        )
+    ) {
+
+        return "#95a5a6";
+
+    }
+
+
+    if (
+        document.body.classList.contains(
+            "monochrome"
+        )
+    ) {
+
+        return "#aaaaaa";
+
+    }
+
+
+    return "#8bac0f";
+
+}
+
+
+/* =====================================================
+   GHOST COLOR
+===================================================== */
+
+function getGhostColor() {
+
+    if (
+        document.body.classList.contains(
+            "color-mode"
+        )
+    ) {
+
+        return "#17202a";
+
+    }
+
+
+    if (
+        document.body.classList.contains(
+            "monochrome"
+        )
+    ) {
+
+        return "#222222";
+
+    }
+
+
+    return "#0f380f";
+
+}
+
+
+/* =====================================================
+   DRAW
+===================================================== */
+
+function draw() {
+
+    ctx.fillStyle =
+        getScreenColor();
+
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    drawMatrix(
+        board,
+        {
+            x: 0,
+            y: 0
+        }
+    );
+
+
+    if (
+        player &&
+        !paused
+    ) {
+
+        drawGhost();
+
+    }
+
+
+    if (player) {
+
+        drawMatrix(
+            player.matrix,
+            player.pos
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   DRAW MATRIX
+===================================================== */
+
+function drawMatrix(
+    matrix,
+    offset,
+    alpha = 1
+) {
+
+    const colors =
+        getColors();
+
+
+    ctx.globalAlpha =
+        alpha;
+
+
+    matrix.forEach(
+        (row, y) => {
+
+            row.forEach(
+                (value, x) => {
+
+                    if (
+                        value !== 0
+                    ) {
+
+                        ctx.fillStyle =
+                            colors[value];
+
+
+                        ctx.fillRect(
+
+                            (
+                                x +
+                                offset.x
+                            ) * BLOCK,
+
+                            (
+                                y +
+                                offset.y
+                            ) * BLOCK,
+
+                            BLOCK - 1,
+
+                            BLOCK - 1
+
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+
+    ctx.globalAlpha = 1;
+
+}
+
+
+/* =====================================================
+   GHOST PIECE
+===================================================== */
+
+function drawGhost() {
+
+    const ghost = {
+
+        matrix:
+            player.matrix,
+
+        pos: {
+
+            x:
+                player.pos.x,
+
+            y:
+                player.pos.y
+
+        }
+
+    };
+
+
+    while (
+        !collide(
+            board,
+            ghost
+        )
+    ) {
+
+        ghost.pos.y++;
+
+    }
+
+
+    ghost.pos.y--;
+
+
+    drawMatrix(
+        ghost.matrix,
+        ghost.pos,
+        0.25
+    );
+
+
+    ctx.globalAlpha =
+        0.55;
+
+
+    ctx.strokeStyle =
+        getGhostColor();
+
+
+    ctx.lineWidth = 2;
+
+
+    ghost.matrix.forEach(
+        (row, y) => {
+
+            row.forEach(
+                (value, x) => {
+
+                    if (
+                        value !== 0
+                    ) {
+
+                        ctx.strokeRect(
+
+                            (
+                                x +
+                                ghost.pos.x
+                            ) * BLOCK + 2,
+
+                            (
+                                y +
+                                ghost.pos.y
+                            ) * BLOCK + 2,
+
+                            BLOCK - 5,
+
+                            BLOCK - 5
+
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+
+    ctx.globalAlpha = 1;
+
+}
+
+
+/* =====================================================
+   NEXT PIECE
+===================================================== */
+
+function drawNext() {
+
+    nextCtx.fillStyle =
+        getScreenColor();
+
+
+    nextCtx.fillRect(
+        0,
+        0,
+        nextCanvas.width,
+        nextCanvas.height
+    );
+
+
+    const matrix =
+        nextPiece.matrix;
+
+
+    const colors =
+        getColors();
+
+
+    const size =
+        22;
+
+
+    const offsetX =
+        (
+            100 -
+            matrix[0].length *
+            size
+        ) / 2;
+
+
+    const offsetY =
+        (
+            100 -
+            matrix.length *
+            size
+        ) / 2;
+
+
+    matrix.forEach(
+        (row, y) => {
+
+            row.forEach(
+                (value, x) => {
+
+                    if (
+                        value !== 0
+                    ) {
+
+                        nextCtx.fillStyle =
+                            colors[value];
+
+
+                        nextCtx.fillRect(
+
+                            offsetX +
+                            x * size,
+
+                            offsetY +
+                            y * size,
+
+                            size - 1,
+
+                            size - 1
+
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   COLLISION
+===================================================== */
+
+function collide(
+    board,
+    player
+) {
+
+    const matrix =
+        player.matrix;
+
+
+    const pos =
+        player.pos;
+
+
+    for (
+        let y = 0;
+        y < matrix.length;
+        y++
+    ) {
+
+        for (
+            let x = 0;
+        x < matrix[y].length;
+        x++
+        ) {
+
+            if (
+                matrix[y][x] !== 0
+                &&
+                (
+                    board[
+                        y + pos.y
+                    ] === undefined
+                    ||
+                    board[
+                        y + pos.y
+                    ][
+                        x + pos.x
+                    ] === undefined
+                    ||
+                    board[
+                        y + pos.y
+                    ][
+                        x + pos.x
+                    ] !== 0
+                )
+            ) {
+
+                return true;
+
+            }
+
+        }
+
+    }
+
+
+    return false;
+
+}
+
+
+/* =====================================================
+   MERGE
+===================================================== */
+
+function merge(
+    board,
+    player
+) {
+
+    player.matrix.forEach(
+        (row, y) => {
+
+            row.forEach(
+                (value, x) => {
+
+                    if (
+                        value !== 0
+                    ) {
+
+                        board[
+                            y + player.pos.y
+                        ][
+                            x + player.pos.x
+                        ] =
+                            value;
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   ROTATE
+===================================================== */
+
+function rotate(
+    matrix,
+    direction
+) {
+
+    for (
+        let y = 0;
+        y < matrix.length;
+        y++
+    ) {
+
+        for (
+            let x = 0;
+            x < y;
+            x++
+        ) {
+
+            [
+                matrix[x][y],
+                matrix[y][x]
+            ] =
+            [
+                matrix[y][x],
+                matrix[x][y]
+            ];
+
+        }
+
+    }
+
+
+    if (
+        direction > 0
+    ) {
+
+        matrix.forEach(
+            row =>
+                row.reverse()
+        );
+
+    }
+
+    else {
+
+        matrix.reverse();
+
+    }
+
+}
+
+
+/* =====================================================
+   PLAYER ROTATE
+===================================================== */
+
+function playerRotate(
+    direction
+) {
+
+    const oldX =
+        player.pos.x;
+
+
+    let offset = 1;
+
+
+    rotate(
+        player.matrix,
+        direction
+    );
+
+
+    while (
+        collide(
+            board,
+            player
+        )
+    ) {
+
+        player.pos.x +=
+            offset;
+
+
+        offset =
+            -(
+                offset +
+                (
+                    offset > 0
+                        ? 1
+                        : -1
+                )
+            );
+
+
+        if (
+            offset >
+            player.matrix[0].length
+        ) {
+
+            rotate(
+                player.matrix,
+                -direction
+            );
+
+
+            player.pos.x =
+                oldX;
+
+
+            return;
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   MOVE
+===================================================== */
+
+function playerMove(
+    direction
+) {
+
+    player.pos.x +=
+        direction;
+
+
+    if (
+        collide(
+            board,
+            player
+        )
+    ) {
+
+        player.pos.x -=
+            direction;
+
+    }
+
+}
+
+
+/* =====================================================
+   NORMAL FALL
+===================================================== */
+
+function playerDrop() {
+
+    player.pos.y++;
+
+
+    if (
+        collide(
+            board,
+            player
+        )
+    ) {
+
+        player.pos.y--;
+
+
+        merge(
+            board,
+            player
+        );
+
+
+        playerReset();
+
+
+        sweep();
+
+
+        updateScore();
+
+    }
+
+
+    dropCounter = 0;
+
+}
+
+
+/* =====================================================
+   PLAYER RESET
+===================================================== */
+
+function playerReset() {
+
+    player =
+        createPlayer();
+
+
+    if (
+        collide(
+            board,
+            player
+        )
+    ) {
+
+        gameOver();
+
+        return;
+
+    }
+
+
+    drawNext();
+
+}
+
+
+/* =====================================================
+   CLEAR LINES
+===================================================== */
+
+function sweep() {
+
+    let rowCount = 0;
+
+
+    outer:
+
+    for (
+        let y = ROWS - 1;
+        y >= 0;
+        y--
+    ) {
+
+        for (
+            let x = 0;
+            x < COLS;
+            x++
+        ) {
+
+            if (
+                board[y][x] === 0
+            ) {
+
+                continue outer;
+
+            }
+
+        }
+
+
+        board.splice(
+            y,
+            1
+        );
+
+
+        board.unshift(
+            new Array(
+                COLS
+            ).fill(0)
+        );
+
+
+        y++;
+
+
+        rowCount++;
+
+    }
+
+
+    if (
+        rowCount > 0
+    ) {
+
+        lines +=
+            rowCount;
+
+
+        const points = [
+
+            0,
+
+            40,
+
+            100,
+
+            300,
+
+            1200
+
+        ];
+
+
+        score +=
+            points[rowCount] *
+            level;
+
+
+        level =
+            Math.floor(
+                lines / 10
+            ) + 1;
+
+
+        dropInterval =
+            Math.max(
+                80,
+
+                800 -
+                (
+                    level - 1
+                ) * 70
+
+            );
+
+    }
+
+}
+
+
+/* =====================================================
+   SCORE DISPLAY
+===================================================== */
+
+function updateScore() {
+
+    scoreElement.textContent =
+        String(score)
+            .padStart(
+                6,
+                "0"
+            );
+
+
+    linesElement.textContent =
+        String(lines)
+            .padStart(
+                3,
+                "0"
+            );
+
+
+    levelElement.textContent =
+        String(level)
+            .padStart(
+                2,
+                "0"
+            );
+
+}
+
+
+/* =====================================================
+   GAME LOOP
+===================================================== */
+
+function update(
+    time = 0
+) {
+
+    if (
+        !playing
+    ) {
+
+        return;
+
+    }
+
+
+    const deltaTime =
+        time -
+        lastTime;
+
+
+    lastTime =
+        time;
+
+
+    if (
+        !paused
+    ) {
+
+        dropCounter +=
+            deltaTime;
+
+
+        const currentInterval =
+            fastFalling
+                ? 35
+                : dropInterval;
+
+
+        if (
+            dropCounter >
+            currentInterval
+        ) {
+
+            playerDrop();
+
+        }
+
+    }
+
+
+    draw();
+
+
+    animationID =
+        requestAnimationFrame(
+            update
+        );
+
+}
+
+
+/* =====================================================
+   KEYBOARD CONTROLS
+===================================================== */
+
+document.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (
+            !playing
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            [
+                "ArrowUp",
+                "ArrowDown",
+                "ArrowLeft",
+                "ArrowRight"
+            ].includes(
+                event.key
+            )
+        ) {
+
+            event.preventDefault();
+
+        }
+
+
+        if (
+            event.key === "p" ||
+            event.key === "P"
+        ) {
+
+            togglePause();
+
+            return;
+
+        }
+
+
+        if (
+            paused
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            event.key === "ArrowLeft" ||
+            event.key === "a" ||
+            event.key === "A"
+        ) {
+
+            playerMove(-1);
+
+        }
+
+
+        else if (
+            event.key === "ArrowRight" ||
+            event.key === "d" ||
+            event.key === "D"
+        ) {
+
+            playerMove(1);
+
+        }
+
+
+        else if (
+            event.key === "ArrowUp" ||
+            event.key === "w" ||
+            event.key === "W"
+        ) {
+
+            playerRotate(1);
+
+        }
+
+
+        else if (
+            event.key === "ArrowDown" ||
+            event.key === "s" ||
+            event.key === "S"
+        ) {
+
+            fastFalling = true;
+
+        }
+
+    }
+);
+
+
+/* =====================================================
+   KEY RELEASE
+===================================================== */
+
+document.addEventListener(
+    "keyup",
+    function(event) {
+
+        if (
+            event.key === "ArrowDown" ||
+            event.key === "s" ||
+            event.key === "S"
+        ) {
+
+            fastFalling = false;
+
+        }
+
+    }
+);
+
+
+/* =====================================================
+   PAUSE
+===================================================== */
+
+function togglePause() {
+
+    if (
+        !playing
+    ) {
+
+        return;
+
+    }
+
+
+    paused =
+        !paused;
+
+
+    document.getElementById(
+        "pauseButton"
+    ).textContent =
+        paused
+            ? "RESUME"
+            : "PAUSE";
+
+}
+
+
+/* =====================================================
+   PAUSE BUTTON
+===================================================== */
+
+document
+    .getElementById(
+        "pauseButton"
+    )
+    .onclick =
+    togglePause;
+
+
+/* =====================================================
+   QUIT
+===================================================== */
+
+document
+    .getElementById(
+        "quitButton"
+    )
+    .onclick =
+    function() {
+
+        playing =
+            false;
+
+
+        fastFalling =
+            false;
+
+
+        cancelAnimationFrame(
+            animationID
+        );
+
+
+        game.classList.add(
+            "hidden"
+        );
+
+
+        gameOverScreen.classList.add(
+            "hidden"
+        );
+
+
+        menu.classList.remove(
+            "hidden"
+        );
+
+
+        startSecretTimer();
+
+    };
+
+
+/* =====================================================
+   GAME OVER
+===================================================== */
+
+function gameOver() {
+
+    playing =
+        false;
+
+
+    fastFalling =
+        false;
+
+
+    cancelAnimationFrame(
+        animationID
+    );
+
+
+    document.getElementById(
+        "finalScore"
+    ).textContent =
+        "SCORE: " +
+        String(score)
+            .padStart(
+                6,
+                "0"
+            );
+
+
+    game.classList.add(
+        "hidden"
+    );
+
+
+    gameOverScreen.classList.remove(
+        "hidden"
+    );
+
+}
+
+
+/* =====================================================
+   RESTART
+===================================================== */
+
+document
+    .getElementById(
+        "restartButton"
+    )
+    .onclick =
+    function() {
+
+        gameOverScreen.classList.add(
+            "hidden"
+        );
+
+
+        startGame();
+
+    };
+
+
+/* =====================================================
+   MAIN MENU
+===================================================== */
+
+document
+    .getElementById(
+        "mainMenuButton"
+    )
+    .onclick =
+    function() {
+
+        playing =
+            false;
+
+
+        fastFalling =
+            false;
+
+
+        cancelAnimationFrame(
+            animationID
+        );
+
+
+        gameOverScreen.classList.add(
+            "hidden"
+        );
+
+
+        game.classList.add(
+            "hidden"
+        );
+
+
+        instructions.classList.add(
+            "hidden"
+        );
+
+
+        menu.classList.remove(
+            "hidden"
+        );
+
+
+        startSecretTimer();
+
+    };
+
+
+/* =====================================================
+   INITIALIZE EASTER EGG
+===================================================== */
+
+startSecretTimer();
+
+</script>
+
+</body>
+
+</html>
