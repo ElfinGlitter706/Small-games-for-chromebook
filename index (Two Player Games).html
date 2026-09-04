@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Two Player Mini Games</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@500;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+  body {
+    background: #0a0a12;
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  #game-container {
+    width: 1000px;
+    height: 700px;
+    background: linear-gradient(145deg, #12121f, #0d0d18);
+    border: 4px solid #3a3a5c;
+    border-radius: 12px;
+    position: relative;
+    box-shadow: 0 0 40px rgba(80, 80, 180, 0.3);
+    overflow: hidden;
+  }
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+  }
+  .screen.active { display: flex; }
+  h1 {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 28px;
+    color: #7df9ff;
+    text-shadow: 0 0 15px #00d4ff;
+    margin-bottom: 30px;
+    text-align: center;
+    line-height: 1.4;
+  }
+  h2 {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 20px;
+    color: #ffcc00;
+    margin-bottom: 25px;
+  }
+  .btn {
+    background: linear-gradient(180deg, #3a3a7a, #252545);
+    border: 3px solid #5a5ab0;
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 12px 32px;
+    margin: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 220px;
+    text-align: center;
+  }
+  .btn:hover {
+    background: linear-gradient(180deg, #4a4a9a, #353565);
+    border-color: #7df9ff;
+    box-shadow: 0 0 18px rgba(125, 249, 255, 0.4);
+    transform: scale(1.04);
+  }
+  .btn:active { transform: scale(0.97); }
+  .menu-buttons { display: flex; flex-direction: column; align-items: center; }
+  .how-to-content {
+    background: rgba(20, 20, 40, 0.95);
+    border: 2px solid #4a4a8a;
+    border-radius: 10px;
+    padding: 22px 30px;
+    max-width: 720px;
+    max-height: 420px;
+    overflow-y: auto;
+    line-height: 1.6;
+    font-size: 14px;
+    margin-bottom: 25px;
+  }
+  .how-to-content h3 { color: #7df9ff; margin: 12px 0 6px; font-size: 16px; }
+  .how-to-content p { margin-bottom: 8px; color: #ddd; }
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 12px;
+  }
+  .player-box {
+    background: rgba(30, 30, 60, 0.85);
+    border: 2px solid #555;
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .player-box h4 { color: #ffcc00; margin-bottom: 6px; }
+  #canvas-container { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; background: #111; }
+  #hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 10px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 15px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .score-box {
+    background: rgba(0,0,0,0.65);
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid #444;
+  }
+  .turn-indicator {
+    font-size: 16px;
+    color: #7df9ff;
+    text-shadow: 0 0 8px #00d4ff;
+  }
+  #power-bar-container {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 280px;
+    height: 22px;
+    background: #222;
+    border: 3px solid #555;
+    border-radius: 6px;
+    display: none;
+    z-index: 10;
+  }
+  #power-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #00ff88, #ffcc00, #ff3333);
+    border-radius: 3px;
+  }
+  #pause-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  #pause-overlay.active { display: flex; }
+  #game-over-screen h1 { font-size: 32px; margin-bottom: 16px; }
+  #winner-text {
+    font-size: 26px;
+    color: #ffcc00;
+    margin-bottom: 35px;
+    text-shadow: 0 0 15px #ffaa00;
+  }
+  .back-btn {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+    min-width: 110px;
+    font-size: 13px;
+    padding: 9px 16px;
+  }
+  .mode-btn { min-width: 260px; }
+  .enter-hint {
+    color: #7df9ff;
+    font-size: 16px;
+    margin-top: 10px;
+    animation: pulse 1.2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+</style>
+</head>
+<body>
+<div id="game-container">
+
+  <!-- MAIN MENU -->
+  <div id="main-menu" class="screen active">
+    <h1>TWO PLAYER<br>MINI GAMES</h1>
+    <div class="menu-buttons">
+      <div class="btn" onclick="showScreen('game-select')">START</div>
+    </div>
+  </div>
+
+  <!-- GAME SELECT -->
+  <div id="game-select" class="screen">
+    <div class="btn back-btn" onclick="showScreen('main-menu')">← BACK</div>
+    <h1>SELECT GAME</h1>
+    <div class="menu-buttons">
+      <div class="btn" onclick="showHowToThenStart('darts')">DARTS</div>
+      <div class="btn" onclick="showHowToThenStart('golf')">GOLF</div>
+      <div class="btn" onclick="showBasketballModes()">BASKETBALL</div>
+    </div>
+  </div>
+
+  <!-- BASKETBALL MODE SELECT -->
+  <div id="bb-mode-select" class="screen">
+    <div class="btn back-btn" onclick="showScreen('game-select')">← BACK</div>
+    <h1>BASKETBALL MODE</h1>
+    <div class="menu-buttons">
+      <div class="btn mode-btn" onclick="showHowToThenStart('basketball', 'static')">STATIC (Classic)</div>
+      <div class="btn mode-btn" onclick="showHowToThenStart('basketball', 'side')">SIDE TO SIDE</div>
+      <div class="btn mode-btn" onclick="showHowToThenStart('basketball', 'updown')">UP / DOWN</div>
+    </div>
+  </div>
+
+  <!-- HOW TO PLAY (before game) -->
+  <div id="how-to-detail" class="screen">
+    <div class="btn back-btn" id="how-to-back-btn">← BACK</div>
+    <h2 id="how-to-title">DARTS</h2>
+    <div class="how-to-content" id="how-to-body"></div>
+    <div class="btn" id="start-game-btn">PRESS ENTER TO START</div>
+    <div class="enter-hint">or click the button above</div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="screen">
+    <div id="canvas-container">
+      <canvas id="gameCanvas" width="1000" height="700"></canvas>
+      <div id="hud">
+        <div class="score-box" id="p1-score">P1: 301</div>
+        <div class="turn-indicator" id="turn-text">PLAYER 1'S TURN</div>
+        <div class="score-box" id="p2-score">P2: 301</div>
+      </div>
+      <div id="power-bar-container"><div id="power-bar"></div></div>
+      <div id="pause-overlay">
+        <h2>PAUSED</h2>
+        <div class="btn" onclick="resumeGame()">CONTINUE</div>
+        <div class="btn" onclick="quitToMenu()">MAIN MENU</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="game-over-screen" class="screen">
+    <h1>GAME OVER</h1>
+    <div id="winner-text">PLAYER 1 WINS</div>
+    <div class="menu-buttons">
+      <div class="btn" id="play-again-btn">PLAY AGAIN</div>
+      <div class="btn" onclick="showScreen('game-select')">GAME SELECT</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== GLOBALS ====================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let currentGame = null;
+let bbMode = 'static';
+let currentPlayer = 1;
+let scores = {1: 0, 2: 0};
+let gameState = 'menu';
+let keys = {};
+let animId = null;
+let paused = false;
+let pendingGame = null;
+let pendingMode = null;
+
+document.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+  if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+  if (k === 'escape' && gameState === 'playing') togglePause();
+
+  // Enter to start game from how-to screen
+  if ((k === 'enter' || k === 'return') && document.getElementById('how-to-detail').classList.contains('active')) {
+    confirmStartGame();
+  }
+});
+document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+// ==================== SCREENS ====================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id !== 'game-screen') {
+    gameState = 'menu';
+    paused = false;
+    cancelAnimationFrame(animId);
+    document.getElementById('pause-overlay').classList.remove('active');
+  }
+}
+
+function showBasketballModes() { showScreen('bb-mode-select'); }
+
+function showHowToThenStart(game, mode = null) {
+  pendingGame = game;
+  pendingMode = mode;
+
+  const data = {
+    darts: {
+      title: 'DARTS (301)',
+      html: `
+        <h3>Goal</h3>
+        <p>Classic 301. Both players start at 301. Subtract the value of each dart. First to reach exactly 0 wins. Going below 0 busts the turn (score reverts).</p>
+        <h3>Board</h3>
+        <p>Traditional dartboard: numbers 1-20, single, double (outer ring), triple (inner ring), outer bull 25, inner bull 50.</p>
+        <h3>Aiming</h3>
+        <p>The crosshair jitters around randomly. Stay on target and throw when ready.</p>
+        <div class="controls-grid">
+          <div class="player-box"><h4>PLAYER 1</h4><p>Move: W A S D<br>Throw: F</p></div>
+          <div class="player-box"><h4>PLAYER 2</h4><p>Move: Arrows<br>Throw: Comma (,)</p></div>
+        </div>
+        <p style="margin-top:12px;color:#aaa">Press ESC to pause during the game.</p>`
+    },
+    golf: {
+      title: 'GOLF',
+      html: `
+        <h3>Goal</h3>
+        <p>Complete 3 holes with the fewest total strokes. Lowest strokes wins.</p>
+        <h3>Holes</h3>
+        <p>1. Flat fairway<br>2. Pond (water hazard instantly resets you to last valid position)<br>3. Bumpy terrain</p>
+        <p>Both players play the same hole before advancing. You can aim backwards. Going off-screen keeps your last valid position.</p>
+        <div class="controls-grid">
+          <div class="player-box"><h4>PLAYER 1</h4><p>Aim: A / D<br>Power: Hold F</p></div>
+          <div class="player-box"><h4>PLAYER 2</h4><p>Aim: ← / →<br>Power: Hold Comma (,)</p></div>
+        </div>
+        <p style="margin-top:12px;color:#aaa">Press ESC to pause during the game.</p>`
+    },
+    basketball: {
+      title: 'BASKETBALL',
+      html: `
+        <h3>Goal</h3>
+        <p>Each player gets <strong>45 seconds</strong> to score as many baskets as possible. Highest score wins.</p>
+        <h3>Scoring</h3>
+        <p>• Normal baskets = <strong>2 points</strong><br>
+           • Baskets made with <strong>10 seconds or less</strong> remaining = <strong>3 points</strong></p>
+        <h3>Modes</h3>
+        <p><b>Static</b> – Hoop jumps to a new random reachable location after every shot<br>
+        <b>Side to Side</b> – Hoop slides left/right<br>
+        <b>Up / Down</b> – Hoop moves up and down</p>
+        <div class="controls-grid">
+          <div class="player-box"><h4>PLAYER 1</h4><p>Aim: A / D<br>Shoot: Hold F</p></div>
+          <div class="player-box"><h4>PLAYER 2</h4><p>Aim: ← / →<br>Shoot: Hold Comma (,)</p></div>
+        </div>
+        <p style="margin-top:12px;color:#aaa">Press ESC to pause during the game.</p>`
+    }
+  };
+
+  document.getElementById('how-to-title').textContent = data[game].title;
+  document.getElementById('how-to-body').innerHTML = data[game].html;
+
+  // Back button logic
+  const backBtn = document.getElementById('how-to-back-btn');
+  if (game === 'basketball') {
+    backBtn.onclick = () => showScreen('bb-mode-select');
+  } else {
+    backBtn.onclick = () => showScreen('game-select');
+  }
+
+  document.getElementById('start-game-btn').onclick = confirmStartGame;
+
+  showScreen('how-to-detail');
+}
+
+function confirmStartGame() {
+  startGame(pendingGame, pendingMode);
+}
+
+// ==================== PAUSE ====================
+function togglePause() {
+  if (gameState !== 'playing') return;
+  paused = !paused;
+  document.getElementById('pause-overlay').classList.toggle('active', paused);
+  if (!paused) gameLoop();
+}
+function resumeGame() { paused = false; document.getElementById('pause-overlay').classList.remove('active'); gameLoop(); }
+function quitToMenu() { paused = false; document.getElementById('pause-overlay').classList.remove('active'); showScreen('main-menu'); }
+
+// ==================== GAME FLOW ====================
+function startGame(game, mode) {
+  currentGame = game;
+  if (mode) bbMode = mode;
+  currentPlayer = 1;
+  gameState = 'playing';
+  paused = false;
+  showScreen('game-screen');
+  document.getElementById('pause-overlay').classList.remove('active');
+
+  if (game === 'darts') initDarts();
+  else if (game === 'golf') initGolf();
+  else if (game === 'basketball') initBasketball();
+
+  document.getElementById('play-again-btn').onclick = () => startGame(game, mode);
+  updateHUD();
+  gameLoop();
+}
+
+function updateHUD() {
+  if (currentGame === 'darts') {
+    document.getElementById('p1-score').textContent = `P1: ${scores[1]}`;
+    document.getElementById('p2-score').textContent = `P2: ${scores[2]}`;
+  } else if (currentGame === 'golf') {
+    document.getElementById('p1-score').textContent = `P1 Strokes: ${golf.strokes[1]}`;
+    document.getElementById('p2-score').textContent = `P2 Strokes: ${golf.strokes[2]}`;
+  } else {
+    document.getElementById('p1-score').textContent = `P1: ${scores[1]}`;
+    document.getElementById('p2-score').textContent = `P2: ${scores[2]}`;
+  }
+  document.getElementById('turn-text').textContent = `PLAYER ${currentPlayer}'S TURN`;
+}
+
+function endGame() {
+  gameState = 'gameover';
+  cancelAnimationFrame(animId);
+  let winner = 0;
+  if (currentGame === 'golf') {
+    winner = golf.strokes[1] < golf.strokes[2] ? 1 : (golf.strokes[2] < golf.strokes[1] ? 2 : 0);
+  } else {
+    winner = scores[1] > scores[2] ? 1 : (scores[2] > scores[1] ? 2 : 0);
+  }
+  document.getElementById('winner-text').textContent = winner === 0 ? "IT'S A TIE!" : `PLAYER ${winner} WINS`;
+  showScreen('game-over-screen');
+}
+
+function switchPlayer() {
+  currentPlayer = currentPlayer === 1 ? 2 : 1;
+  updateHUD();
+}
+
+function getInteract() { return currentPlayer === 1 ? 'f' : ','; }
+function getLeft() { return currentPlayer === 1 ? 'a' : 'arrowleft'; }
+function getRight() { return currentPlayer === 1 ? 'd' : 'arrowright'; }
+function getUp() { return currentPlayer === 1 ? 'w' : 'arrowup'; }
+function getDown() { return currentPlayer === 1 ? 's' : 'arrowdown'; }
+
+// ==================== GAME LOOP ====================
+function gameLoop() {
+  if (gameState !== 'playing' || paused) return;
+  if (currentGame === 'darts') updateDarts();
+  else if (currentGame === 'golf') updateGolf();
+  else if (currentGame === 'basketball') updateBasketball();
+  animId = requestAnimationFrame(gameLoop);
+}
+
+// ==================== DARTS ====================
+const DART_ORDER = [20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
+let darts = {};
+
+function initDarts() {
+  scores = {1: 301, 2: 301};
+  darts = {
+    aimX: 500, aimY: 320,
+    jitterX: 0, jitterY: 0,
+    velX: 0, velY: 0,
+    throwing: false,
+    dartX: 0, dartY: 0,
+    landTimer: 0,
+    throwsLeft: 3,
+    message: '',
+    msgTimer: 0
+  };
+  document.getElementById('power-bar-container').style.display = 'none';
+  updateHUD();
+}
+
+function updateDarts() {
+  ctx.clearRect(0, 0, 1000, 700);
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, 1000, 700);
+
+  drawTraditionalBoard();
+
+  if (!darts.throwing && darts.landTimer <= 0) {
+    darts.velX += (Math.random() - 0.5) * 1.8;
+    darts.velY += (Math.random() - 0.5) * 1.8;
+    darts.velX *= 0.82;
+    darts.velY *= 0.82;
+    const spd = Math.hypot(darts.velX, darts.velY);
+    if (spd > 4.5) { darts.velX *= 4.5/spd; darts.velY *= 4.5/spd; }
+
+    darts.jitterX += darts.velX;
+    darts.jitterY += darts.velY;
+    darts.jitterX = Math.max(-22, Math.min(22, darts.jitterX));
+    darts.jitterY = Math.max(-22, Math.min(22, darts.jitterY));
+
+    const sp = 2.8;
+    if (keys[getLeft()]) darts.aimX -= sp;
+    if (keys[getRight()]) darts.aimX += sp;
+    if (keys[getUp()]) darts.aimY -= sp;
+    if (keys[getDown()]) darts.aimY += sp;
+    darts.aimX = Math.max(80, Math.min(920, darts.aimX));
+    darts.aimY = Math.max(80, Math.min(620, darts.aimY));
+
+    if (keys[getInteract()]) {
+      keys[getInteract()] = false;
+      darts.throwing = true;
+      darts.dartX = darts.aimX + darts.jitterX;
+      darts.dartY = darts.aimY + darts.jitterY;
+      darts.landTimer = 25;
+    }
+  }
+
+  if (darts.throwing) {
+    darts.landTimer--;
+    if (darts.landTimer <= 0) {
+      darts.throwing = false;
+      const result = getDartScore(darts.dartX, darts.dartY);
+      darts.message = result.label;
+      darts.msgTimer = 70;
+
+      const prev = scores[currentPlayer];
+      scores[currentPlayer] -= result.points;
+
+      if (scores[currentPlayer] < 0) {
+        scores[currentPlayer] = prev;
+        darts.message = 'BUST!';
+        darts.throwsLeft = 0;
+      } else if (scores[currentPlayer] === 0) {
+        updateHUD();
+        setTimeout(endGame, 900);
+        return;
+      }
+
+      darts.throwsLeft--;
+      updateHUD();
+
+      if (darts.throwsLeft <= 0) {
+        setTimeout(() => {
+          darts.throwsLeft = 3;
+          switchPlayer();
+        }, 800);
+      }
+    }
+  }
+
+  if (!darts.throwing) {
+    const cx = darts.aimX + darts.jitterX;
+    const cy = darts.aimY + darts.jitterY;
+    ctx.strokeStyle = '#ff2222';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 16, cy); ctx.lineTo(cx + 16, cy);
+    ctx.moveTo(cx, cy - 16); ctx.lineTo(cx, cy + 16);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 9, 0, Math.PI*2);
+    ctx.stroke();
+  }
+
+  if (darts.throwing || darts.landTimer > -5) {
+    ctx.fillStyle = '#ddd';
+    ctx.beginPath();
+    ctx.moveTo(darts.dartX, darts.dartY - 14);
+    ctx.lineTo(darts.dartX - 6, darts.dartY + 9);
+    ctx.lineTo(darts.dartX + 6, darts.dartY + 9);
+    ctx.fill();
+    ctx.fillStyle = '#c0392b';
+    ctx.fillRect(darts.dartX - 2.5, darts.dartY - 5, 5, 12);
+  }
+
+  if (darts.msgTimer > 0) {
+    ctx.fillStyle = darts.message === 'BUST!' ? '#e74c3c' : '#f1c40f';
+    ctx.font = 'bold 36px Orbitron';
+    ctx.textAlign = 'center';
+    ctx.fillText(darts.message, 500, 160);
+    darts.msgTimer--;
+  }
+
+  ctx.fillStyle = '#aaa';
+  ctx.font = '14px Orbitron';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Darts left: ${darts.throwsLeft}   |   ESC = Pause`, 500, 680);
+}
+
+function drawTraditionalBoard() {
+  const cx = 500, cy = 320, R = 195;
+  ctx.beginPath(); ctx.arc(cx, cy, R+18, 0, Math.PI*2);
+  ctx.fillStyle = '#111'; ctx.fill();
+
+  for (let i = 0; i < 20; i++) {
+    const a0 = (-Math.PI/2 - Math.PI/20) + i * (Math.PI/10);
+    const a1 = a0 + Math.PI/10;
+    const isEven = i % 2 === 0;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, R, a0, a1);
+    ctx.closePath();
+    ctx.fillStyle = isEven ? '#e8e8e8' : '#1a1a1a';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, R*0.62, a0, a1);
+    ctx.arc(cx, cy, R*0.54, a1, a0, true);
+    ctx.closePath();
+    ctx.fillStyle = isEven ? '#27ae60' : '#c0392b';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, a0, a1);
+    ctx.arc(cx, cy, R*0.92, a1, a0, true);
+    ctx.closePath();
+    ctx.fillStyle = isEven ? '#27ae60' : '#c0392b';
+    ctx.fill();
+  }
+
+  ctx.beginPath(); ctx.arc(cx, cy, 28, 0, Math.PI*2);
+  ctx.fillStyle = '#27ae60'; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, 12, 0, Math.PI*2);
+  ctx.fillStyle = '#c0392b'; ctx.fill();
+
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 20; i++) {
+    const a = (-Math.PI/2 - Math.PI/20) + i * (Math.PI/10);
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a)*12, cy + Math.sin(a)*12);
+    ctx.lineTo(cx + Math.cos(a)*R, cy + Math.sin(a)*R);
+    ctx.stroke();
+  }
+  [R, R*0.92, R*0.62, R*0.54, 28, 12].forEach(r => {
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+  });
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 15px Orbitron';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < 20; i++) {
+    const a = -Math.PI/2 + i * (Math.PI/10);
+    const x = cx + Math.cos(a) * (R + 28);
+    const y = cy + Math.sin(a) * (R + 28);
+    ctx.fillText(DART_ORDER[i], x, y);
+  }
+}
+
+function getDartScore(x, y) {
+  const cx = 500, cy = 320, R = 195;
+  const dx = x - cx, dy = y - cy;
+  const dist = Math.hypot(dx, dy);
+  if (dist > R + 5) return {points: 0, label: 'MISS'};
+  if (dist <= 12) return {points: 50, label: 'BULL 50'};
+  if (dist <= 28) return {points: 25, label: '25'};
+
+  let angle = Math.atan2(dy, dx);
+  angle = (angle + Math.PI*2 - (-Math.PI/2 - Math.PI/20)) % (Math.PI*2);
+  const seg = Math.floor(angle / (Math.PI/10)) % 20;
+  const num = DART_ORDER[seg];
+
+  if (dist >= R*0.92) return {points: num*2, label: `DOUBLE ${num}`};
+  if (dist >= R*0.54 && dist <= R*0.62) return {points: num*3, label: `TRIPLE ${num}`};
+  return {points: num, label: `${num}`};
+}
+
+// ==================== GOLF ====================
+let golf = {};
+
+function initGolf() {
+  golf = {
+    strokes: {1: 0, 2: 0},
+    hole: 0,
+    playersDone: {1: false, 2: false},
+    ballX: 100, ballY: 500,
+    lastX: 100, lastY: 500,
+    vx: 0, vy: 0,
+    onGround: true,
+    angle: -0.4,
+    power: 0,
+    charging: false,
+    message: '',
+    msgTimer: 0,
+    waiting: false,
+    sunk: false
+  };
+  setupHole();
+  document.getElementById('power-bar-container').style.display = 'block';
+  document.getElementById('power-bar').style.width = '0%';
+  updateHUD();
+}
+
+function setupHole() {
+  golf.ballX = 100;
+  golf.ballY = 500;
+  golf.lastX = 100;
+  golf.lastY = 500;
+  golf.vx = 0;
+  golf.vy = 0;
+  golf.onGround = true;
+  golf.angle = -0.4;
+  golf.power = 0;
+  golf.charging = false;
+  golf.waiting = false;
+  golf.sunk = false;
+  golf.playersDone = {1: false, 2: false};
+}
+
+function getGroundY(x) {
+  let gy = 530;
+  if (golf.hole === 2) {
+    for (let i = 0; i < 5; i++) {
+      const bx = 300 + i * 100;
+      const dist = Math.abs(x - bx);
+      if (dist < 55) {
+        const h = (1 - dist/55) * (38 - i*6);
+        gy = Math.min(gy, 530 - h);
+      }
+    }
+  }
+  return gy;
+}
+
+function updateGolf() {
+  ctx.clearRect(0, 0, 1000, 700);
+
+  const sky = ctx.createLinearGradient(0,0,0,700);
+  sky.addColorStop(0, '#6eb5ff');
+  sky.addColorStop(0.55, '#c8e6ff');
+  sky.addColorStop(1, '#5aad45');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,1000,700);
+
+  ctx.fillStyle = '#3d8b37';
+  ctx.beginPath();
+  ctx.moveTo(0, 530);
+  for (let x = 0; x <= 1000; x += 10) {
+    ctx.lineTo(x, getGroundY(x));
+  }
+  ctx.lineTo(1000, 700);
+  ctx.lineTo(0, 700);
+  ctx.fill();
+
+  const holeX = 860;
+  const holeY = 530;
+
+  if (golf.hole === 1) {
+    ctx.fillStyle = '#1a6a9a';
+    ctx.beginPath();
+    ctx.ellipse(470, 545, 110, 38, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#2a8abf';
+    ctx.beginPath();
+    ctx.ellipse(470, 540, 85, 24, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(holeX, holeY + 4, 16, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.beginPath();
+  ctx.arc(holeX, holeY + 4, 10, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(holeX, holeY - 12);
+  ctx.lineTo(holeX, holeY - 70);
+  ctx.stroke();
+  ctx.fillStyle = '#e74c3c';
+  ctx.beginPath();
+  ctx.moveTo(holeX, holeY - 70);
+  ctx.lineTo(holeX + 26, holeY - 56);
+  ctx.lineTo(holeX, holeY - 42);
+  ctx.fill();
+
+  if (golf.onGround && !golf.waiting && !golf.sunk) {
+    if (keys[getLeft()]) golf.angle -= 0.035;
+    if (keys[getRight()]) golf.angle += 0.035;
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6,4]);
+    ctx.beginPath();
+    ctx.moveTo(golf.ballX, golf.ballY);
+    ctx.lineTo(golf.ballX + Math.cos(golf.angle)*100, golf.ballY + Math.sin(golf.angle)*100);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const inter = getInteract();
+    if (keys[inter] && !golf.charging) {
+      golf.charging = true;
+      golf.power = 0;
+    }
+    if (golf.charging) {
+      if (keys[inter]) {
+        golf.power = Math.min(100, golf.power + 1.8);
+        document.getElementById('power-bar').style.width = golf.power + '%';
+      } else {
+        const p = golf.power / 100;
+        golf.vx = Math.cos(golf.angle) * p * 16;
+        golf.vy = Math.sin(golf.angle) * p * 16;
+        golf.onGround = false;
+        golf.charging = false;
+        golf.strokes[currentPlayer]++;
+        document.getElementById('power-bar').style.width = '0%';
+        updateHUD();
+      }
+    }
+  }
+
+  if (!golf.onGround && !golf.sunk) {
+    golf.vy += 0.28;
+    golf.ballX += golf.vx;
+    golf.ballY += golf.vy;
+
+    if (golf.hole === 1) {
+      const pdx = golf.ballX - 470;
+      const pdy = golf.ballY - 540;
+      if ((pdx*pdx)/(110*110) + (pdy*pdy)/(38*38) < 1) {
+        golf.ballX = golf.lastX;
+        golf.ballY = golf.lastY;
+        golf.vx = 0;
+        golf.vy = 0;
+        golf.onGround = true;
+        golf.message = 'WATER HAZARD!';
+        golf.msgTimer = 50;
+        golf.strokes[currentPlayer]++;
+        updateHUD();
+      }
+    }
+
+    if (golf.ballX < 15 || golf.ballX > 985 || golf.ballY < 20) {
+      golf.ballX = golf.lastX;
+      golf.ballY = golf.lastY;
+      golf.vx = 0;
+      golf.vy = 0;
+      golf.onGround = true;
+      golf.message = 'OUT OF BOUNDS';
+      golf.msgTimer = 50;
+    }
+
+    const gy = getGroundY(golf.ballX);
+
+    const distToHole = Math.hypot(golf.ballX - holeX, golf.ballY - (holeY + 4));
+    if (distToHole < 22 && golf.ballY > holeY - 25) {
+      golf.sunk = true;
+      golf.vx *= 0.3;
+      golf.vy *= 0.3;
+      golf.message = `HOLED! (${golf.strokes[currentPlayer]} strokes)`;
+      golf.msgTimer = 80;
+      golf.waiting = true;
+      golf.playersDone[currentPlayer] = true;
+
+      setTimeout(() => {
+        if (golf.playersDone[1] && golf.playersDone[2]) {
+          if (golf.hole >= 2) {
+            endGame();
+          } else {
+            golf.hole++;
+            setupHole();
+            currentPlayer = 1;
+            updateHUD();
+          }
+        } else {
+          switchPlayer();
+          golf.ballX = 100;
+          golf.ballY = 500;
+          golf.lastX = 100;
+          golf.lastY = 500;
+          golf.sunk = false;
+          golf.waiting = false;
+          golf.onGround = true;
+        }
+      }, 1500);
+    }
+
+    if (golf.ballY >= gy - 9 && !golf.sunk) {
+      golf.ballY = gy - 9;
+      golf.vy *= -0.45;
+      golf.vx *= 0.74;
+
+      if (Math.abs(golf.vy) < 1.4 && Math.abs(golf.vx) < 1.2) {
+        golf.vx = 0;
+        golf.vy = 0;
+        golf.onGround = true;
+        golf.lastX = golf.ballX;
+        golf.lastY = golf.ballY;
+      }
+    }
+  }
+
+  if (!golf.sunk || golf.msgTimer > 40) {
+    ctx.beginPath();
+    ctx.arc(golf.ballX, golf.ballY, 9, 0, Math.PI*2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = '#222';
+  ctx.font = '15px Orbitron';
+  ctx.textAlign = 'left';
+  const names = ['Flat Fairway', 'Pond Hazard', 'Bumpy Hills'];
+  ctx.fillText(`Hole ${golf.hole+1}/3 – ${names[golf.hole]}`, 18, 48);
+  ctx.fillText('ESC = Pause', 18, 70);
+
+  if (golf.msgTimer > 0) {
+    ctx.fillStyle = '#f1c40f';
+    ctx.font = 'bold 32px Orbitron';
+    ctx.textAlign = 'center';
+    ctx.fillText(golf.message, 500, 280);
+    golf.msgTimer--;
+  }
+}
+
+// ==================== BASKETBALL ====================
+let bb = {};
+
+function initBasketball() {
+  scores = {1: 0, 2: 0};
+  bb = {
+    timeLeft: 45,
+    timerActive: false,
+    lastTimestamp: performance.now(),
+    ballX: 500,
+    ballY: 580,
+    vx: 0, vy: 0,
+    inAir: false,
+    angle: -Math.PI / 2,
+    power: 0,
+    charging: false,
+    hoopX: 500,
+    hoopY: 180,
+    hoopBaseX: 500,
+    hoopBaseY: 180,
+    movePhase: 0,
+    scored: false,
+    message: '',
+    msgTimer: 0,
+    playersFinished: {1: false, 2: false},
+    countdown: 3,
+    countdownActive: true,
+    countdownTimer: 0
+  };
+  randomizeHoopStatic();
+  resetBB();
+  document.getElementById('power-bar-container').style.display = 'block';
+  document.getElementById('power-bar').style.width = '0%';
+  updateHUD();
+}
+
+function randomizeHoopStatic() {
+  bb.hoopX = 280 + Math.random() * 440;
+  bb.hoopY = 130 + Math.random() * 100;
+  bb.hoopBaseX = bb.hoopX;
+  bb.hoopBaseY = bb.hoopY;
+}
+
+function resetBB() {
+  bb.ballX = 500 + (Math.random() - 0.5) * 80;
+  bb.ballY = 580;
+  bb.vx = 0;
+  bb.vy = 0;
+  bb.inAir = false;
+  bb.charging = false;
+  bb.power = 0;
+  bb.angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.3;
+  bb.scored = false;
+  document.getElementById('power-bar').style.width = '0%';
+}
+
+function startPlayerCountdown() {
+  bb.countdown = 3;
+  bb.countdownActive = true;
+  bb.countdownTimer = 0;
+  bb.timerActive = false;
+}
+
+function updateBasketball() {
+  const now = performance.now();
+
+  // Countdown
+  if (bb.countdownActive) {
+    bb.countdownTimer += (now - bb.lastTimestamp) / 1000;
+    bb.lastTimestamp = now;
+
+    if (bb.countdownTimer >= 1) {
+      bb.countdownTimer = 0;
+      bb.countdown--;
+      if (bb.countdown < 0) {
+        bb.countdownActive = false;
+        bb.timerActive = true;
+        bb.lastTimestamp = performance.now();
+      }
+    }
+  }
+
+  // Game timer
+  if (bb.timerActive && !paused) {
+    const dt = (now - bb.lastTimestamp) / 1000;
+    bb.lastTimestamp = now;
+    bb.timeLeft -= dt;
+
+    if (bb.timeLeft <= 0) {
+      bb.timeLeft = 0;
+      bb.timerActive = false;
+      bb.playersFinished[currentPlayer] = true;
+
+      if (bb.playersFinished[1] && bb.playersFinished[2]) {
+        setTimeout(endGame, 800);
+      } else {
+        setTimeout(() => {
+          switchPlayer();
+          bb.timeLeft = 45;
+          startPlayerCountdown();
+          if (bbMode === 'static') randomizeHoopStatic();
+          resetBB();
+        }, 1000);
+      }
+    }
+  } else {
+    bb.lastTimestamp = now;
+  }
+
+  ctx.clearRect(0, 0, 1000, 700);
+
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, 1000, 700);
+
+  ctx.fillStyle = '#b8954a';
+  ctx.beginPath();
+  ctx.moveTo(0, 700);
+  ctx.lineTo(1000, 700);
+  ctx.lineTo(850, 520);
+  ctx.lineTo(150, 520);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(150, 520);
+  ctx.lineTo(850, 520);
+  ctx.stroke();
+
+  if (!bb.countdownActive) {
+    bb.movePhase += 0.022;
+    if (bbMode === 'side') {
+      bb.hoopX = bb.hoopBaseX + Math.sin(bb.movePhase) * 180;
+      bb.hoopY = bb.hoopBaseY;
+    } else if (bbMode === 'updown') {
+      bb.hoopX = bb.hoopBaseX;
+      bb.hoopY = bb.hoopBaseY + Math.sin(bb.movePhase) * 70;
+    }
+  }
+
+  const rimRadius = 48;
+
+  ctx.fillStyle = '#ddd';
+  ctx.fillRect(bb.hoopX - 70, bb.hoopY - 85, 140, 110);
+  ctx.strokeStyle = '#c0392b';
+  ctx.lineWidth = 5;
+  ctx.strokeRect(bb.hoopX - 50, bb.hoopY - 60, 100, 60);
+
+  ctx.strokeStyle = '#e74c3c';
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.arc(bb.hoopX, bb.hoopY + 12, rimRadius, 0, Math.PI*2);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#eee';
+  ctx.lineWidth = 1.5;
+  for (let i = -3; i <= 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(bb.hoopX + i*14, bb.hoopY + 14);
+    ctx.lineTo(bb.hoopX + i*8, bb.hoopY + 65);
+    ctx.stroke();
+  }
+
+  if (!bb.inAir && bb.timerActive && !bb.countdownActive) {
+    if (keys[getLeft()]) bb.angle -= 0.03;
+    if (keys[getRight()]) bb.angle += 0.03;
+    bb.angle = Math.max(-Math.PI/2 - 0.7, Math.min(-Math.PI/2 + 0.7, bb.angle));
+
+    ctx.strokeStyle = 'rgba(255,255,100,0.6)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5,5]);
+    ctx.beginPath();
+    ctx.moveTo(bb.ballX, bb.ballY);
+    ctx.lineTo(bb.ballX + Math.cos(bb.angle)*120, bb.ballY + Math.sin(bb.angle)*120);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const inter = getInteract();
+    if (keys[inter] && !bb.charging) {
+      bb.charging = true;
+      bb.power = 0;
+    }
+    if (bb.charging) {
+      if (keys[inter]) {
+        bb.power = Math.min(100, bb.power + 1.6);
+        document.getElementById('power-bar').style.width = bb.power + '%';
+      } else {
+        const p = bb.power / 100;
+        bb.vx = Math.cos(bb.angle) * p * 19;
+        bb.vy = Math.sin(bb.angle) * p * 19;
+        bb.inAir = true;
+        bb.charging = false;
+        document.getElementById('power-bar').style.width = '0%';
+      }
+    }
+  }
+
+  if (bb.inAir) {
+    bb.vy += 0.26;
+    bb.ballX += bb.vx;
+    bb.ballY += bb.vy;
+
+    const dist = Math.hypot(bb.ballX - bb.hoopX, bb.ballY - (bb.hoopY + 12));
+
+    if (dist < rimRadius + 12 && bb.vy > 0 && !bb.scored) {
+      if (Math.abs(bb.ballX - bb.hoopX) < 34) {
+        bb.scored = true;
+        const pts = bb.timeLeft <= 10 ? 3 : 2;
+        scores[currentPlayer] += pts;
+        bb.message = pts === 3 ? '3 POINTS!' : '2 POINTS!';
+        bb.msgTimer = 50;
+        updateHUD();
+      } else {
+        bb.vy *= -0.5;
+        bb.vx *= 0.65;
+      }
+    }
+
+    if (bb.ballY > 650 || bb.ballX < -50 || bb.ballX > 1050) {
+      if (bbMode === 'static') {
+        randomizeHoopStatic();
+      }
+      setTimeout(() => {
+        if (bb.timerActive) resetBB();
+      }, 300);
+      bb.inAir = false;
+    }
+  }
+
+  ctx.beginPath();
+  ctx.arc(bb.ballX, bb.ballY, 14, 0, Math.PI*2);
+  ctx.fillStyle = '#e67e22';
+  ctx.fill();
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Countdown display
+  if (bb.countdownActive) {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, 1000, 700);
+
+    ctx.fillStyle = '#7df9ff';
+    ctx.font = 'bold 120px Orbitron';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    if (bb.countdown > 0) {
+      ctx.fillText(bb.countdown, 500, 320);
+    } else {
+      ctx.fillStyle = '#2ecc71';
+      ctx.fillText('GO!', 500, 320);
+    }
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '24px Orbitron';
+    ctx.fillText(`PLAYER ${currentPlayer}`, 500, 220);
+  }
+
+  if (!bb.countdownActive) {
+    const timeColor = bb.timeLeft <= 10 ? '#ff3333' : '#7df9ff';
+    ctx.fillStyle = timeColor;
+    ctx.font = 'bold 28px Orbitron';
+    ctx.textAlign = 'center';
+    ctx.fillText(`TIME: ${Math.ceil(bb.timeLeft)}`, 500, 50);
+
+    if (bb.timeLeft <= 10 && bb.timeLeft > 0) {
+      ctx.fillStyle = '#ff3333';
+      ctx.font = 'bold 18px Orbitron';
+      ctx.fillText('3-POINT ZONE!', 500, 80);
+    }
+  }
+
+  ctx.fillStyle = '#ccc';
+  ctx.font = '14px Orbitron';
+  ctx.textAlign = 'left';
+  const modeName = {static:'STATIC', side:'SIDE TO SIDE', updown:'UP / DOWN'}[bbMode];
+  ctx.fillText(`Mode: ${modeName}`, 18, 48);
+  ctx.fillText('ESC = Pause', 18, 68);
+
+  if (bb.msgTimer > 0) {
+    ctx.fillStyle = bb.message.includes('3') ? '#ffcc00' : '#2ecc71';
+    ctx.font = 'bold 40px Orbitron';
+    ctx.textAlign = 'center';
+    ctx.fillText(bb.message, 500, 160);
+    bb.msgTimer--;
+  }
+}
+</script>
+</body>
+</html>
