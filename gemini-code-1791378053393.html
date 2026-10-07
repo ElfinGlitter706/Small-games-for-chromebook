@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PeerJS Multiplayer Example</title>
+  <!-- PeerJS Library via CDN -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #log { background: #f0f0f0; padding: 10px; height: 150px; overflow-y: scroll; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <h2>PeerJS Multiplayer Template</h2>
+  
+  <div>
+    <p>Your Peer ID: <strong id="my-id">Generating...</strong></p>
+    <input type="text" id="peer-id-input" placeholder="Enter Friend's Peer ID">
+    <button onclick="connectToPeer()">Connect to Player</button>
+  </div>
+
+  <div>
+    <h3>Game Actions</h3>
+    <button onclick="sendAction('jump')">Send "Jump"</button>
+    <button onclick="sendAction('move_left')">Send "Move Left"</button>
+  </div>
+
+  <div id="log"></div>
+
+  <script>
+    // 1. Initialize the Peer object
+    const peer = new Peer();
+    let conn = null;
+
+    // Display your generated Peer ID
+    peer.on('open', (id) => {
+      document.getElementById('my-id').innerText = id;
+      log(`Your Peer ID is: ${id}`);
+    });
+
+    // 2. Handle incoming connections (Player 2 connects to Player 1)
+    peer.on('connection', (incomingConn) => {
+      conn = incomingConn;
+      setupConnectionHandlers();
+      log('A player connected to you!');
+    });
+
+    // 3. Connect to another player (Player 1 initiates to Player 2)
+    function connectToPeer() {
+      const targetId = document.getElementById('peer-id-input').value;
+      if (!targetId) return alert('Please enter a Peer ID');
+      
+      conn = peer.connect(targetId);
+      setupConnectionHandlers();
+      log(`Connecting to ${targetId}...`);
+    }
+
+    // 4. Listen for data and handle connection events
+    function setupConnectionHandlers() {
+      conn.on('open', () => {
+        log('Connected to remote player successfully!');
+      });
+
+      conn.on('data', (data) => {
+        log(`Received action from player: ${JSON.stringify(data)}`);
+        // Handle game state/actions here (e.g., move rival player avatar)
+      });
+
+      conn.on('close', () => {
+        log('Player disconnected.');
+        conn = null;
+      });
+    }
+
+    // 5. Send data to the connected player
+    function sendAction(actionType) {
+      if (conn && conn.open) {
+        const payload = { action: actionType, timestamp: Date.now() };
+        conn.send(payload);
+        log(`Sent: ${actionType}`);
+      } else {
+        log('Not connected to any player yet.');
+      }
+    }
+
+    function log(message) {
+      const logDiv = document.getElementById('log');
+      logDiv.innerHTML += `<p>${message}</p>`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+  </script>
+</body>
+</html>
