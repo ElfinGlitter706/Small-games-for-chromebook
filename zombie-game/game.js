@@ -22,41 +22,72 @@ function buildWorld(){
  renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;game.prepend(renderer.domElement);
  scene.add(new THREE.HemisphereLight(0x9cb5c7,0x242018,1.2));const light=new THREE.DirectionalLight(0xffd5a1,2);light.position.set(-8,14,6);light.castShadow=true;scene.add(light);
  const floor=box(42,.5,42,0,-.25,0,mats.floor,true);
- // Room perimeter and internal partitions; doors/windows leave visible openings.
+ // Perimeter walls.
  box(42,5,.6,0,2.5,-21,mats.wall,true);box(42,5,.6,0,2.5,21,mats.wall,true);
  box(.6,5,42,-21,2.5,0,mats.wall,true);box(.6,5,42,21,2.5,0,mats.wall,true);
- box(.5,4,12,-7,2,-4,mats.wall,true);box(.5,4,12,7,2,4,mats.wall,true);
- // Barrier windows
+ // Three connected wings with deliberate door openings.
+ box(.5,4,19.6,-7,2,-11.2,mats.wall,true);box(.5,4,19.6,-7,2,11.2,mats.wall,true);
+ box(.5,4,19.6,7,2,-11.2,mats.wall,true);box(.5,4,19.6,7,2,11.2,mats.wall,true);
+ box(19.6,4,.5,-11.2,2,-7,mats.wall,true);box(19.6,4,.5,11.2,2,-7,mats.wall,true);
+ // Barricaded windows are the designated zombie entry points.
  for(const [x,z,rot] of [[-20.6,-8,0],[20.6,8,Math.PI],[0,-20.6,Math.PI/2],[-8,20.6,-Math.PI/2]]){
   const group=new THREE.Group();group.position.set(x,1.5,z);group.rotation.y=rot;scene.add(group);
   for(let i=0;i<3;i++){const plank=new THREE.Mesh(new THREE.BoxGeometry(2.3,.18,.16),mats.wood);plank.position.y=-.65+i*.65;group.add(plank)}
   const frame=new THREE.Mesh(new THREE.BoxGeometry(2.8,2.5,.28),mats.metal);frame.position.z=-.12;group.add(frame);
   windowZones.push({pos:new THREE.Vector3(x,1.5,z),group,boards:3,max:3,lastRepair:0});
  }
- // Generator and machines
- const gen=box(1.2,2,1, -14,1, -13,mats.metal);gen.userData.name='Power Switch';
+ // Wall-facing machines around the perimeter.
+ const gen=box(1.2,2,1,-14,1,-13,mats.metal);gen.userData.name='Power Switch';
  interactives.push({type:'power',name:'Power Switch',pos:gen.position,cost:0,mesh:gen});
- addMachine('Juggernog',2500,[-13,0,3],0xb83d35);addMachine('Speed Cola',3000,[13,0,-3],0x36a45e);
- addMachine('Mystery Box',950,[0,0,-10],0x1e83bc);
- addMachine('Pack-a-Punch',5000,[14,0,12],0xb18b34);
- // visible wall-buy panels with normal offset from backing wall
- addWallBuy('Wall Buy: Carbine',350,[-19.55,1.5,3],[1,0,0]);
- addWallBuy('Wall Buy: Shotgun',500,[19.55,1.5,-3],[-1,0,0]);
- // Debris door
- const debris=box(2.8,2.4,.7,0,1.2,0,mats.wood,true);
- interactives.push({type:'debris',name:'Clear Debris',pos:debris.position,cost:750,mesh:debris,obstacle:collisionObstacles[collisionObstacles.length-1]});
- // props
- for(let i=0;i<12;i++){const a=i*Math.PI/6;const p=box(.35,.6,.35,Math.cos(a)*16,.3,Math.sin(a)*16,mats.metal);p.rotation.y=a}
+ addMachine('Juggernog',2500,[-20.35,0,3],[1,0,0],0xb83d35);
+ addMachine('Speed Cola',3000,[20.35,0,-3],[-1,0,0],0x36a45e);
+ addMachine('Mystery Box',950,[0,0,-20.35],[0,0,1],0x1e83bc);
+ addMachine('Pack-a-Punch',5000,[10,0,20.35],[0,0,-1],0xb18b34);
+ addWallBuy('Wall Buy: Field Tool A',350,[-20.35,1.5,-2],[1,0,0]);
+ addWallBuy('Wall Buy: Field Tool B',500,[20.35,1.5,2],[-1,0,0]);
+ // Debris blocks the actual room connections and can be purchased away.
+ addDebrisDoor('Clear North Wing',750,[0,1.2,-7],[0,0,1]);
+ addDebrisDoor('Clear West Wing',1000,[-7,1.2,0],[1,0,0]);
+ addDebrisDoor('Clear East Wing',1000,[7,1.2,0],[-1,0,0]);
+ // A few props give the rooms different silhouettes.
+ for(const [x,z] of [[-14,-14],[14,-14],[-14,14],[14,14]]){
+  box(1.2,1.1,1.2,x,.55,z,mats.wood);
+  box(.18,2.2,.18,x-.48,1.1,z-.48,mats.metal);
+  box(.18,2.2,.18,x+.48,1.1,z-.48,mats.metal);
+ }
 }
-function addMachine(name,cost,pos,color){const mesh=new THREE.Group();mesh.position.set(...pos);scene.add(mesh);const body=new THREE.Mesh(new THREE.BoxGeometry(1.1,2,.8),new THREE.MeshStandardMaterial({color,metalness:.3}));body.position.y=1;mesh.add(body);const glow=new THREE.Mesh(new THREE.SphereGeometry(.25,16,12),new THREE.MeshBasicMaterial({color:0xffffff}));glow.position.set(0,1.7,.43);mesh.add(glow);interactives.push({type:name==='Mystery Box'?'box':name==='Pack-a-Punch'?'pap':'perk',name,cost,pos:mesh.position,mesh})}
-function addWallBuy(name,cost,pos,normal){const panel=new THREE.Mesh(new THREE.BoxGeometry(.9,1.1,.12),mats.gold);panel.position.set(pos[0]+normal[0]*.16,pos[1],pos[2]+normal[2]*.16);panel.lookAt(panel.position.clone().add(new THREE.Vector3(...normal)));scene.add(panel);interactives.push({type:'wallbuy',name,cost,pos:panel.position,mesh:panel})}
+function addMachine(name,cost,pos,normal,color){
+ const mesh=new THREE.Group();mesh.position.set(...pos);mesh.rotation.y=Math.atan2(normal[0],normal[2]);scene.add(mesh);
+ const body=new THREE.Mesh(new THREE.BoxGeometry(1.1,2,.72),new THREE.MeshStandardMaterial({color,metalness:.3,roughness:.55}));body.position.set(0,1,0);mesh.add(body);
+ const face=new THREE.Mesh(new THREE.BoxGeometry(.72,.72,.08),new THREE.MeshStandardMaterial({color:0x17232a,emissive:color,emissiveIntensity:.22}));face.position.set(0,1.35,.4);mesh.add(face);
+ const glow=new THREE.Mesh(new THREE.SphereGeometry(.18,16,12),new THREE.MeshBasicMaterial({color:0xffffff}));glow.position.set(0,1.72,.42);mesh.add(glow);
+ const trim=new THREE.Mesh(new THREE.BoxGeometry(.9,.08,.08),mats.gold);trim.position.set(0,.32,.4);mesh.add(trim);
+ interactives.push({type:name==='Mystery Box'?'box':name==='Pack-a-Punch'?'pap':'perk',name,cost,pos:mesh.position,mesh});
+}
+function addWallBuy(name,cost,pos,normal){
+ const group=new THREE.Group();group.position.set(...pos);group.rotation.y=Math.atan2(normal[0],normal[2]);scene.add(group);
+ const panel=new THREE.Mesh(new THREE.BoxGeometry(1.05,1.25,.12),mats.gold);group.add(panel);
+ const screen=new THREE.Mesh(new THREE.BoxGeometry(.72,.55,.05),new THREE.MeshStandardMaterial({color:0x14242b,emissive:0x24677a,emissiveIntensity:.5}));screen.position.set(0,.18,.09);group.add(screen);
+ const icon=new THREE.Mesh(new THREE.OctahedronGeometry(.22,0),mats.blue);icon.position.set(0,-.35,.13);group.add(icon);
+ interactives.push({type:'wallbuy',name,cost,pos:group.position,mesh:group});
+}
+function addDebrisDoor(name,cost,pos,normal){
+ const group=new THREE.Group();group.position.set(...pos);group.rotation.y=Math.atan2(normal[0],normal[2]);scene.add(group);
+ const obstacleMesh=new THREE.Mesh(new THREE.BoxGeometry(2.8,2.4,.72),mats.wood);group.add(obstacleMesh);
+ for(let i=0;i<5;i++){const plank=new THREE.Mesh(new THREE.BoxGeometry(.18,2.5,.82),mats.metal);plank.position.set(-1.1+i*.55,0,.12);plank.rotation.z=(i%2?-.12:.12);group.add(plank)}
+ const obstacle={mesh:obstacleMesh,box:new THREE.Box3().setFromObject(obstacleMesh)};collisionObstacles.push(obstacle);
+ interactives.push({type:'debris',name,pos:group.position,cost,mesh:group,obstacle});
+}
 function makeZombie(){
  const group=new THREE.Group(), torso=new THREE.Mesh(new THREE.BoxGeometry(.7,1,.38),mats.zombie);torso.position.y=1.35;group.add(torso);
  const head=new THREE.Mesh(new THREE.BoxGeometry(.48,.48,.45),mats.zombie);head.position.y=2.12;group.add(head);
  const arms=[],legs=[];for(let s of [-1,1]){const arm=new THREE.Mesh(new THREE.BoxGeometry(.2,.78,.22),mats.zombie);arm.position.set(s*.48,1.38,0);group.add(arm);arms.push(arm);const leg=new THREE.Mesh(new THREE.BoxGeometry(.25,.8,.28),mats.zombie);leg.position.set(s*.2,.45,0);group.add(leg);legs.push(leg)}
  const hp=round<=2?70:round<=5?100:130;const runner=round>=6&&Math.random()<.6;
  const z={group,torso,head,arms,legs,hp,maxHp:hp,speed:runner?Math.min(3.4,playerSprintSpeed-.8):round<=2?1.05:round<=5?1.55:2.0,runner,phase:Math.random()*6.28,alive:true,radius:.38};
- const a=Math.random()*Math.PI*2,r=18;group.position.set(Math.cos(a)*r,0,Math.sin(a)*r);scene.add(group);zombies.push(z);return z;
+ const entry=windowZones[Math.floor(Math.random()*windowZones.length)];
+ const inward=entry.pos.clone().multiplyScalar(-1).setY(0).normalize();
+ group.position.copy(entry.pos.clone().add(inward.multiplyScalar(2.2)));group.position.y=0;
+ scene.add(group);zombies.push(z);return z;
 }
 function damageZombie(z,damage,headshot=false,killBonus=true){if(!z.alive)return;z.hp-=damage;if(z.hp<=0){z.alive=false;scene.remove(z.group);points+=headshot?100:60;if(killBonus)notice(headshot?'HEADSHOT +100':'ZOMBIE ELIMINATED');if(zombies.every(v=>!v.alive))finishRound()}else points+=10}
 function finishRound(){if(roundActive){roundActive=false;roundTimer=5;notice(`ROUND ${round} COMPLETE`)}}
@@ -92,7 +123,7 @@ function update(dt){
   const swing=Math.sin(z.phase)*(z.runner?.9:.48);z.legs[0].rotation.x=swing;z.legs[1].rotation.x=-swing*(round<=2?.45:1);z.arms[0].rotation.x=-swing*.7;z.arms[1].rotation.x=swing*.7;z.torso.rotation.z=round<=2?Math.sin(z.phase*.5)*.22:0;z.group.position.y=z.runner?Math.abs(Math.sin(z.phase*2))*.08:Math.abs(Math.sin(z.phase))*.025;
   if(d<1.25&&!godMode){health-=12*dt;if(health<=0){health=100;points=Math.max(0,points-250);player.pos.set(0,1.65,8);notice('DOWNED — RESPAWNED')}}
  }
- if(roundActive&&spawnQueue>0){spawnClock-=dt;if(spawnClock<=0){makeZombie();spawnQueue--;spawnClock=Math.max(.45,2.4-round*.08)}}
+ if(roundActive&&spawnQueue>0){spawnClock-=dt;if(spawnClock<=0){makeZombie();spawnQueue--;spawnClock=Math.max(.8,2.8-round*.07)}}
  if(!roundActive&&roundTimer>0){roundTimer-=dt;if(roundTimer<=0)startRound()}
  for(let i=effects.length-1;i>=0;i--){const e=effects[i];e.life-=dt;if(e.life<=0){if(e.callback)e.callback();else scene.remove(e.mesh);effects.splice(i,1)}}
  for(const t of turrets){t.life-=dt;t.cool-=dt;if(t.life<=0){scene.remove(t.mesh);turrets.splice(turrets.indexOf(t),1);continue}if(t.cool<=0){let closest=null,dd=9;for(const z of zombies)if(z.alive){const d=z.group.position.distanceTo(t.mesh.position);if(d<dd){dd=d;closest=z}}if(closest){damageZombie(closest,30,false);t.mesh.lookAt(closest.group.position);t.cool=.25}}}
