@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Undead: Last Stand</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+</script>
+</head>
+<body>
+<div id="menu" class="screen">
+  <div class="panel">
+    <div class="eyebrow">NIGHTFALL RESEARCH FACILITY</div><h1>UNDEAD <span>LAST STAND</span></h1>
+    <section id="modeScreen">
+      <h2>Choose your mode</h2>
+      <button data-mode="powered">POWER REQUIRED</button>
+      <button data-mode="free">CLASSIC FREE-PLAY</button>
+      <p class="muted">Power Required: activate the generator to enable powered machines.</p>
+    </section>
+    <section id="loadoutScreen" hidden>
+      <h2>Starting loadout</h2>
+      <label>Primary weapon<select id="weaponChoice"><option value="m1911">M1911 Pistol</option><option value="rk5">RK5 Pistol</option></select></label>
+      <label>Tactical equipment<select id="equipmentChoice"><option value="frag">Frag Grenades (G)</option><option value="acid">Acid Grenades (F)</option><option value="sentry">Sentry Turret (V)</option></select></label>
+      <button id="startGame">DEPLOY</button>
+    </section>
+  </div>
+</div>
+<div id="game" hidden>
+  <div id="topHud"><span id="round">ROUND 1</span><span id="points">500 PTS</span><span id="health">HEALTH 100</span></div>
+  <div id="crosshair">+</div><div id="prompt"></div><div id="notice"></div>
+  <div id="bottomHud"><span id="weaponName">M1911</span><span id="ammo">8 / ∞</span><span id="equipmentHud"></span></div>
+  <div id="cheats" hidden><h3>FIELD DEBUG TERMINAL</h3><button data-cheat="points">Give Max Points</button><button data-cheat="god">God Mode: OFF</button><button data-cheat="doors">Unlock All Doors</button><button data-cheat="ray">Spawn Ray Gun</button><button id="closeCheats">Close</button></div>
+  <div id="mobileControls" hidden>
+    <div id="stick"><div id="stickKnob"></div></div><div id="lookZone"></div>
+    <div class="actions"><button data-action="fire">FIRE</button><button data-action="reload">RELOAD</button><button data-action="interact">E</button><button data-action="jump">JUMP</button><button data-action="sprint">SPRINT</button><button data-action="frag">G</button><button data-action="acid">F</button><button data-action="deploy">V</button></div>
+  </div>
+</div>
+<script type="module" src="game.js"></script>
+</body></html>
