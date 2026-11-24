@@ -1,0 +1,22 @@
+config_version=5
+
+[application]
+
+config/name="DEADSHIFT"
+boot_splash/image="res://scripts/boot.png"
+boot_splash/bg_color=Color(0.06275, 0.10588, 0.13725, 1)
+boot_splash/fullsize=false
+run/main_scene="res://remake.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"

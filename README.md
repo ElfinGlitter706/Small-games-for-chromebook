@@ -1,3 +1,5 @@
+[Play DEADSHIFT in your browser](https://elfinglitter706.github.io/Small-games-for-chromebook/DEADSHIFT/)
+
 HOW TO PLAY GAMES:
 Download the "Download raw file" Option,
 Show in folder,
