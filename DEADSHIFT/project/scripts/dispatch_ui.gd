@@ -11,6 +11,9 @@ var contract: Label
 var loading := Control.new()
 var loading_label: Label
 var busy := false
+var continue_button:Button
+var field_status:Label
+var climate:ColorRect
 var menu := Control.new()
 var overlay := Control.new()
 var play := Control.new()
@@ -90,11 +93,15 @@ func _ready() -> void:
 	map_buttons.append(button(menu,"Vertigo Tower",Rect2(46,291,393,60),func(): request_map(true)))
 	map_title = words(menu,"",46,408,33)
 	description = words(menu,"",47,472,18)
+	button(menu,"Training",Rect2(46,552,173,43),func():command.emit("practice"))
+	continue_button=button(menu,"Continue run",Rect2(232,552,207,43),func():command.emit("continue"))
+	continue_button.hide()
 	deploy_button = button(menu,"DEPLOY",Rect2(46,605,393,65),func(): deployed.emit())
 	var active_style := StyleBoxFlat.new()
 	active_style.bg_color = Color("d79f68")
 	deploy_button.add_theme_stylebox_override("normal",active_style)
 	deploy_button.add_theme_color_override("font_color",Color("18242a"))
+	climate=backing(play,Rect2(0,0,1280,720),Color.TRANSPARENT)
 	scope=backing(play,Rect2(0,0,1280,720),Color.WHITE)
 	var scope_mat:=ShaderMaterial.new()
 	scope_mat.shader=preload("res://scripts/scope.gdshader")
@@ -106,7 +113,8 @@ func _ready() -> void:
 	objective=words(play,"",35,91,18,AMBER)
 	perk_line=words(play,"",35,606,16,ICE)
 	contract=words(play,"",36,119,15,ICE)
-	for field in [objective,perk_line,contract]:
+	field_status=words(play,"",36,150,16,ICE)
+	for field in [objective,perk_line,contract,field_status]:
 		field.add_theme_constant_override("outline_size",4)
 	damage=backing(play,Rect2(0,0,1280,720),Color(1,.12,.06,0))
 	backing(play,Rect2(20,640,385,62),Color("101b22e8"))

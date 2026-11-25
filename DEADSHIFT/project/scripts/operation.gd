@@ -18,6 +18,15 @@ const Models = preload("res://scripts/weapon_models.gd")
 var armory := preload("res://scripts/armory.gd").new()
 var fitted: Array=[]
 var previous_board_pos := Vector3.ZERO
+const Checkpoint=preload("res://scripts/checkpoint.gd")
+var session:=preload("res://scripts/field_session.gd").new()
+var monitor:=preload("res://scripts/frame_monitor.gd").new()
+var run_id:=0
+var practice_target:=0
+var sprint_hold:=false
+var crouch_hold:=false
+var mastery_streak:=0
+var magazine_kills:=0
 var specialty := {}
 var choice := {}
 var choice_index := 0
@@ -119,7 +128,9 @@ var supplies: Array[Dictionary] = []
 func _ready() -> void:
 	armory.testing=has_meta("test_run")
 	if not armory.testing: armory.load_progress()
-	records.load("user://deadshift_records.cfg")
+	if not has_meta("test_run"):
+		records.load("user://deadshift_records.cfg")
+		if "Ghost Signal" in records.get_value("medals","unlocked",[]):session.discover(self,"Ghost Signal")
 	add_child(preview_camera)
 	add_child(player)
 	player.add_child(camera)
@@ -131,6 +142,9 @@ func _ready() -> void:
 	options = preload("res://scripts/field_options.gd").new()
 	add_child(options)
 	options.build(self)
+	ui.play.add_child(monitor)
+	monitor.setup(self)
+	ui.continue_button.visible=records.has_section_key("solo","checkpoint")
 	ui.selected.connect(select_map)
 	ui.deployed.connect(deploy)
 	ui.command.connect(menu_command)
@@ -183,7 +197,8 @@ func model() -> void:
 	var length: float = action.MOTION[loadout].w
 	var metal: String=["43535e","845e49","748d9a"][options.pref("Weapon finish",0)]
 	if upgrades.get(loadout,0)>0: metal="9c8565"
-	if loadout=="relic": metal="5e8889"
+	if loadout=="relic":metal="5e8889"
+	if armory.mastered(loadout):metal="c7a34b"
 	art.piece("taper",Vector3(0,.01,0),Vector3(.18,length,.17),metal,Vector3(PI/2,0,0),gun)
 	art.piece("pipe",Vector3(0,.038,-length*.55),Vector3(.10,length*.62,.10),"253137",Vector3(PI/2,0,0),gun)
 	art.piece("box",Vector3(0,.112,-.055),Vector3(.073,.043,length*.70),"19282f",Vector3.ZERO,gun)
@@ -224,6 +239,8 @@ func model() -> void:
 func deploy() -> void:
 	if state!="menu": return
 	state = "play"
+	run_id=Time.get_ticks_usec()
+	session.begin(self)
 	intro=1.85
 	intro_start=preview_camera.global_transform.orthonormalized()
 	intro_focus=Vector3(0,16,5) if tower else sector.center_of(sector.route[0])
@@ -244,6 +261,7 @@ func begin_wave() -> void:
 	intermission = 0
 	sound.cue("round")
 	announce(("BREACH RUSH   /   WAVE %02d" if director.challenge else "WAVE %02d") % wave,1.9)
+	session.open_wave(self)
 	refresh()
 
 func announce(message: String, duration := 1.8) -> void:
@@ -258,7 +276,7 @@ func refresh() -> void:
 	ui.ammo.text = "%s     %02d  /  %03d" % [WEAPONS[loadout].title,ammo,reserve]
 	ui.ammo.text+="   Lv%d" % armory.rank(loadout)
 	if upgrades.get(loadout,0)>0: ui.ammo.text += "  +%d" % upgrades[loadout]
-	ui.perk_line.text = "PERKS  %d/4   %s" % [perks.size(),"   ".join(perks).to_upper()]
+	ui.perk_line.text = "PERKS  %d/%d   %s" % [perks.size(),2 if "Two perks" in session.mods else 4,"   ".join(perks).to_upper()]
 
 func spawn_one() -> void:
 	var options: Array[int] = []
@@ -307,7 +325,13 @@ func spawn_one() -> void:
 	if must_defeat:
 		variant="warden"
 		must_defeat=false
+	if session.practice:
+		variant=["walker","runner","armored","brute","warden"][practice_target]
+	if not session.practice and (wave>=4 and sequence%7==2) and variant!="warden":
+		variant="lineman" if tower else "frost"
+		sector.art.piece("oval",Vector3(.02,1.42,-.18),Vector3(.56,.40,.25),"+edac55" if tower else "+8fdbdf",Vector3.ZERO,enemy.torso)
 	enemy.set_meta("type",variant)
+	if session.masked:enemy.wear_portrait()
 	if variant=="runner":
 		enemy.hp=maxi(1,enemy.hp-1)
 		enemy.scale=Vector3(.85,1,.85)
@@ -316,19 +340,21 @@ func spawn_one() -> void:
 		enemy.hp=enemy.hp*2+(16 if variant=="warden" else 3)
 	if variant in ["armored","warden"]:
 		enemy.armor(sector.art)
+	if variant in ["brute","warden"] and "Armored elites" in session.mods:enemy.hp=ceili(enemy.hp*1.5)
 	enemies.append(enemy)
 	sequence += 1
 	queued -= 1
-	sound.at("breach",sector.to_global(origin),-9)
+	threat_audio(enemy,"muffled",false)
 	refresh()
 
 func track(enemy, delta: float) -> void:
-	var offset: Vector3 = player.position - enemy.position
+	var target=session.target(self,enemy)
+	var offset: Vector3 = target.player.position - enemy.position
 	offset.y = 0
-	var near: bool = offset.length() <= 1.28 and not sector.nav.blocked_ray(enemy.position+Vector3.UP,player.position)
+	var near: bool = offset.length() <= 1.28 and not sector.nav.blocked_ray(enemy.position+Vector3.UP,target.player.position)
 	enemy.repath -= delta
 	if not near and enemy.repath <= 0:
-		enemy.route = sector.nav.path(enemy.position,player.position)
+		enemy.route = sector.nav.path(enemy.position,target.player.position)
 		enemy.repath = .50
 		# The first node is the quantized current position. Re-targeting it every
 		# refresh can pull a moving zombie backward at corners.
@@ -348,6 +374,8 @@ func track(enemy, delta: float) -> void:
 				if away.length_squared()<.47: repel += away.normalized()*(.69-away.length())
 			var pace := minf(4.2,1.9+.22*wave)
 			if enemy.get_meta("type")=="runner": pace*=1.6
+			if "Fast pursuit" in session.mods or options.pref("Difficulty",0)==1:pace*=1.18
+			if session.in_condition(self) and session.condition=="Overrun":pace*=1.2
 			if enemy.get_meta("type") in ["brute","warden"]: pace*=.8
 			enemy.position = sector.nav.move(enemy.position,(motion+repel*.45)*pace*delta*(.18 if enemy.stagger>0 else 1.0))
 	var face := offset if near or motion==Vector3.ZERO else motion
@@ -356,9 +384,16 @@ func track(enemy, delta: float) -> void:
 	enemy.animate(delta,not near)
 	if enemy.windup >= .66:
 		enemy.windup = 0
+		target.receive_contact(enemy)
+
+func receive_contact(enemy) -> void:
+		if session.practice:return
 		if hurt_lock <= 0:
+			session.cause=str(enemy.get_meta("type")).capitalize()+" in "+str(sector.room_names.get(sector.cell_at(player.position),"corridor"))
+			if enemy.get_meta("type")=="frost":session.slow=2.3
+			if enemy.get_meta("type")=="lineman":session.interference=2.8
 			var before := health
-			health = maxi(0,health-(32 if enemy.get_meta("type") in ["brute","warden"] else 19))
+			health = maxi(0,health-(32 if enemy.get_meta("type") in ["brute","warden"] else 19)*(0.5 if buffs.get("shield",0)>0 else 1.0))
 			director.wounded(self,before-health)
 			hurt_lock = .52
 			safe_time=0
@@ -373,10 +408,13 @@ func track(enemy, delta: float) -> void:
 					health=max_hp
 					hurt_lock=4
 					announce("Second Chance activated")
+				elif session.roster.any(func(mate):return mate!=self and is_instance_valid(mate) and mate.health>0):state="downed"
 				else: finish(false)
 
 func start_reload() -> void:
 	if state!="play" or riding() or reload_left>0 or ammo>=capacity() or reserve==0: return
+	magazine_kills=0
+	if session.practice:reserve=WEAPONS[loadout].reserve
 	reload_left = reload_duration()
 	reload_click=false
 	sound.cue("rack")
@@ -420,7 +458,14 @@ func fire(melee := false) -> void:
 	refresh()
 
 func kill_enemy(victim, head: bool, gun_kill:bool=true) -> void:
-	if gun_kill and armory.credit(loadout,30 if head else 20):
+	if gun_kill and not session.practice:
+		session.usage[loadout]=session.usage.get(loadout,0)+1
+		magazine_kills+=1
+		var task:String=armory.TASKS[loadout][0]
+		if task=="One magazine":armory.advance(loadout,magazine_kills,true)
+		if task=="Close range" and victim.position.distance_to(player.position)<=4.0:armory.advance(loadout,1)
+		if task=="Elite kills" and victim.get_meta("type") in ["armored","brute","warden","lineman","frost"]:armory.advance(loadout,1)
+	if gun_kill and not session.practice and armory.credit(loadout,roundi((30 if head else 20)*session.multiplier())):
 		announce("%s reached weapon level %d" % [WEAPONS[loadout].title,armory.rank(loadout)],2.4)
 	enemies.erase(victim)
 	fallen.append(victim)
@@ -430,7 +475,7 @@ func kill_enemy(victim, head: bool, gun_kill:bool=true) -> void:
 	if victim.get_meta("type")=="warden": boss_defeated=true
 	if head: heads+=1
 	award((120 if head else 100)*(2 if buffs.get("double",0)>0 else 1))
-	if kills%6==0:
+	if kills%(10 if "Scarce drops" in session.mods else 6)==0:
 		var bundle=sector.art.piece("taper",victim.position+Vector3.UP*.45,Vector3(.39,.47,.39),"+69d7bf",Vector3.ZERO,sector)
 		var kind: String=["ammo","double","overload","bonus","haste","pulse"][(kills/6-1)%6]
 		supplies.append({"mesh":bundle,"life":14.0,"kind":kind})
@@ -442,7 +487,13 @@ func wave_clear() -> void:
 		return
 	wave_scored=wave
 	intermission=director.close(self)
-	announce("Resupply",1.2)
+	if session.train_wave>=0 and wave>=session.train_wave+3:session.freight_ready=true
+	if session.practice:intermission=2.0
+	elif (wave+1)%4==0:
+		sound.cue("radio")
+		announce("Dispatch   /   Multiple breaches inbound",3)
+	else:announce("Resupply",1.2)
+	Checkpoint.capture(self)
 
 func nearby(at: Vector3 = player.position) -> Dictionary:
 	var closest := 2.75
@@ -465,13 +516,20 @@ func nearby(at: Vector3 = player.position) -> Dictionary:
 	return item
 
 func price(item: Dictionary) -> int:
+	if item.kind in ["medical","plate","beacon"]:return {"medical":180,"plate":250,"beacon":300}[item.kind]
+	if item.get("rack",false) and item.kind not in inventory and session.event=="Supply discount" and session.time_left>0:return roundi(item.price*.75)
 	if item.kind=="forge": return item.price*(1+mini(2,upgrades.get(loadout,0)))
 	return 100 if item.get("rack",false) and item.kind in inventory else item.price
 
 func interact() -> void:
 	if state!="play" or riding(): return
+	if session.revive_nearby(self):return
 	var item := nearby()
 	if item.is_empty(): return
+	if session.interference>0 and item.kind not in ["gate","seal"]:announce("Equipment interference"); return
+	if session.jammed(self,item):announce("Machine offline   /   Clear interference or wait for power"); return
+	if item.kind=="gate" and "Starting room only" in session.mods:announce("Starting room challenge"); return
+	if session.interact(self,item):refresh(); return
 	if not choice.is_empty():
 		if choice==item: confirm_choice()
 		choice={}
@@ -522,15 +580,18 @@ func interact() -> void:
 		announce("Reserve already full")
 		return
 	var cost := price(item)
-	if points<cost:
-		announce("Need %d more credits" % (cost-points))
+	var balance:=session.gate_funds(self) if item.kind=="gate" else points
+	if balance<cost:
+		announce("Need %d more credits" % (cost-balance))
 		return
-	if PERKS.has(item.kind) and perks.size()>=4:
+	if PERKS.has(item.kind) and perks.size()>=(2 if "Two perks" in session.mods else 4):
 		choice=item
 		choice_index=0
 		return
-	points -= cost
-	spent+=cost
+	if item.kind=="gate":session.pay_gate(self,cost)
+	else:
+		points -= cost
+		spent+=cost
 	match item.kind:
 		"gate":
 			item.open = true
@@ -560,7 +621,18 @@ func finish(escaped: bool) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if escaped: sound.cue("escape")
 	ui.scope.hide()
+	if session.practice:
+		ui.modal("PRACTICE COMPLETE","Return to map selection to begin a scored run.",false)
+		return
+	Checkpoint.retire(self)
 	var mode := "Vertigo" if tower else "Outpost"
+	var history:Array=records.get_value("runs","history",[])
+	var stats:=monitor.summary()
+	var weapons:=PackedStringArray()
+	for k in session.usage:weapons.append("%s ×%d" % [WEAPONS[k].title,session.usage[k]])
+	var cause:String=("Helicopter" if tower else "Relief train") if escaped else session.cause
+	history.push_front("%s · Wave %d · %s · %d contracts\n%s · %d avg FPS · Slowest room %s" % [mode,wave,cause,director.contracts,", ".join(weapons),stats.fps,stats.room if stats.room!="" else "—"])
+	records.set_value("runs","history",history.slice(0,8))
 	records.set_value(mode,"best",maxi(wave,records.get_value(mode,"best",0)))
 	if escaped: records.set_value(mode,"fastest",minf(sim_time,records.get_value(mode,"fastest",INF)))
 	records.set_value(mode,"last",{"wave":wave,"kills":kills,"headshots":heads,"shots":shots,"hits":hits,"earned":earned,"spent":spent,"time":sim_time,"downs":downs,"weapons":gun_buys,"perks":perk_buys,"contracts":director.contracts,"damage":director.damage_total,"worst_room":director.worst_room})
@@ -577,7 +649,9 @@ func finish(escaped: bool) -> void:
 	ui.modal("EXTRACTED" if escaped else "SIGNAL LOST","Wave %d   ·   %d kills   ·   %d headshots   ·   %.0f%% accuracy\n%d earned   ·   %d spent   ·   %ds survived   ·   Best wave %d" % [wave,kills,heads,100.*hits/maxi(shots,1),earned,spent,int(sim_time),records.get_value(mode,"best",0)]+"\n"+director.debrief(self),false)
 
 func menu_command(action: String) -> void:
-	if action=="menu":
+	if action=="continue":Checkpoint.resume(self)
+	elif action=="practice" and state=="menu":session.practice=true; deploy()
+	elif action=="menu":
 		get_tree().reload_current_scene()
 	elif state=="paused":
 		state = "play"
@@ -594,6 +668,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			ui.modal("PAUSED","WASD move    ·    Mouse aim    ·    R reload    ·    E interact    ·    F shove",true)
 		return
 	if state!="play": return
+	if event is InputEventKey and event.pressed and not event.echo:
+		session.type_key(self,event.keycode if event.keycode else event.physical_keycode)
+		if session.letters.length()>=2:return
 	if intro>0 and event is InputEventMouseButton and event.pressed:
 		intro=0
 		show_play_floor()
@@ -617,6 +694,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		fire()
 	elif event is InputEventKey and event.pressed and not event.echo:
 		match options.action(event.physical_keycode):
+			KEY_P: monitor.visible=not monitor.visible
+			KEY_SHIFT:sprint_hold=not sprint_hold
+			KEY_CTRL:crouch_hold=not crouch_hold
+			KEY_T:
+				if session.practice:practice_target=(practice_target+1)%5;announce("Next target   /   "+["walker","runner","armored","brute","warden"][practice_target])
+			KEY_Y:
+				if session.practice:upgrades[loadout]=(int(upgrades.get(loadout,0))+1)%4;ammo=capacity();model();refresh()
+			KEY_G:
+				if session.practice:
+					var keys:=WEAPONS.keys()
+					equip(keys[(keys.find(loadout)+1)%keys.size()],true)
+				else:session.use_kit(self)
 			KEY_E: interact()
 			KEY_F: fire(true)
 			KEY_R: start_reload()
@@ -633,6 +722,11 @@ func _physics_process(delta: float) -> void:
 	if state=="menu":pan_preview(delta)
 	if state!="play": return
 	sim_time += delta
+	session.tick(self,delta)
+	if not riding():
+		var turn:=delta*options.sensitivity*(1.2 if aiming() else 2.15)
+		player.rotate_y((int(options.down(KEY_LEFT))-int(options.down(KEY_RIGHT)))*turn)
+		camera.rotation.x=clampf(camera.rotation.x+(int(options.down(KEY_UP))-int(options.down(KEY_DOWN)))*turn,-1.4,1.4)
 	if intro>0:
 		intro=maxf(0,intro-delta)
 		var elapsed:=1.85-intro
@@ -675,8 +769,8 @@ func _physics_process(delta: float) -> void:
 		sound.cue("step",-22)
 		step_clock = .37
 	var direction := player.basis*Vector3(axis.x,0,axis.y).normalized()
-	var sprint := options.down(KEY_SHIFT) and walking and not aiming()
-	var crouch := options.down(KEY_CTRL) or Input.is_physical_key_pressed(KEY_C)
+	var sprint := (sprint_hold if options.pref("Sprint toggle",0) else options.down(KEY_SHIFT)) and walking and not aiming()
+	var crouch := (crouch_hold if options.pref("Crouch toggle",0) else options.down(KEY_CTRL)) or Input.is_physical_key_pressed(KEY_C)
 	if crouch and sprint and sliding_ready and jump_y==0:
 		slide=.55
 		slide_dir=direction
@@ -685,6 +779,7 @@ func _physics_process(delta: float) -> void:
 	var speed := 7.4 if sprint else (2.9 if crouch or aiming() else 5.2)
 	if "light" in perks or buffs.get("haste",0)>0: speed*=1.26
 	if loadout=="lmg": speed*=.82
+	if session.slow>0 or session.carried:speed*=.76
 	if slide>0:
 		speed=8.8
 		direction=slide_dir
@@ -751,7 +846,7 @@ func _physics_process(delta: float) -> void:
 			ui.prompt.text="▥   Release from "+str(sector.room_names[item.release_cell])
 	elif reload_left>0: ui.prompt.text = "Reloading"
 	elif ammo==0: ui.prompt.text = "R   /   Reload" if reserve>0 else "F   /   Shove   ·   Find a wall supply"
-	elif sim_time<8: ui.prompt.text = "Tab directory   ·   Shift sprint   ·   RMB aim   ·   E use   ·   Q swap   ·   Esc controls"
+	elif sim_time<8: ui.prompt.text = "Arrows look   ·   Tab map   ·   RMB aim   ·   E use   ·   %s stats   ·   Esc controls" % OS.get_keycode_string(options.bindings.get(KEY_P,KEY_P))
 	note_time -= delta
 	if note_time<=0: ui.banner.text = ""
 	if queued>0 and director.recovery<=0 and enemies.size()<mini(options.active_cap,4+wave):
@@ -759,14 +854,21 @@ func _physics_process(delta: float) -> void:
 		if spawn_clock<=0:
 			spawn_one()
 			spawn_clock = director.cadence(self)
+	var ai_start:=Time.get_ticks_usec()
 	for enemy in enemies:
 		if enemy.mode=="opening":
 			enemy.transition(delta)
 			var lane: Dictionary = sector.lanes[enemy.lane]
-			if enemy.age>enemy.entry_duration*.35: lane.brace.hide()
-			if enemy.mode=="hunt": lane.occupied = false
+			if enemy.age>enemy.entry_duration*.35 and lane.brace.visible:
+				lane.brace.hide()
+				threat_audio(enemy,"splinter",true)
+			if enemy.mode=="hunt":
+				lane.occupied=false
+				threat_audio(enemy,"snarl",true)
 		else: track(enemy,delta)
 		if state!="play": break
+	monitor.enemy_us+=Time.get_ticks_usec()-ai_start
+	monitor.enemy_ticks+=1
 	for corpse in fallen.duplicate():
 		corpse.transition(delta)
 		if corpse.is_queued_for_deletion(): fallen.erase(corpse)
@@ -785,6 +887,18 @@ func _physics_process(delta: float) -> void:
 	if intermission>0:
 		intermission -= delta
 		if intermission<=0: begin_wave()
+
+func training_transition() -> bool:
+	return riding() or lift_wait>0 or lockdown>0 or extraction_active or defense>=0 or boarding>0 or roll_time>0 or offered!=""
+
+func threat_audio(enemy,key:String,caption:bool) -> void:
+	var elite:bool=enemy.get_meta("type") in ["brute","warden","lineman","frost"]
+	sound.at("elite" if elite and key=="snarl" else key,enemy.global_position,-11 if key!="muffled" else -17)
+	if caption and options.pref("Threat captions",0) and sub_time<=0:
+		var local:=camera.to_local(enemy.global_position)
+		var side:="behind" if local.z>absf(local.x) else ("left" if local.x<-.6 else ("right" if local.x>.6 else "ahead"))
+		ui.subtitle.text=("%s   ·   %s" % [("Boards snapping" if key=="splinter" else ("Heavy footsteps" if elite else "Zombie entering")),side])
+		sub_time=1.1
 
 func award(amount: int) -> void:
 	points+=amount
@@ -806,6 +920,8 @@ func equip(key: String, fresh: bool) -> void:
 	if not inventory.has(key):
 		if inventory.size()==2: inventory.erase(loadout)
 		inventory.append(key)
+	magazine_kills=0
+	mastery_streak=0
 	loadout=key
 	fitted=armory.equipped(key)
 	action.winding=false
@@ -975,6 +1091,7 @@ func special_interact(item: Dictionary) -> bool:
 				announce("Two field recordings needed: mess hall and observatory",4)
 			elif not completed.has("cipher"):
 				completed.cipher=true
+				session.discover(self,"Ghost Signal")
 				award(500)
 				equip("relic",true)
 				announce("Relay cipher decoded   /   Aurora Coil unlocked")
@@ -1019,7 +1136,7 @@ func tick_mission(delta: float) -> void:
 		var choices:=["smg","shotgun","lmg","marksman","heavy"]
 		roll_item.label.text=WEAPONS[choices[int(roll_time*10)%5]].title
 		if roll_time<=0:
-			offered="relic" if randf()<.08 else choices.pick_random()
+			offered="relic" if session.rng.randf()<.08 else choices[session.rng.randi_range(0,choices.size()-1)]
 			roll_item.label.text="TAKE   /   "+str(WEAPONS[offered].title)
 			buffs["offer"]=12
 	elif offered!="" and buffs.get("offer",0)<=0:
@@ -1058,7 +1175,7 @@ func tick_mission(delta: float) -> void:
 			return
 		previous_board_pos=local
 		boarding-=delta
-		if boarding<=0: finish(false)
+		if boarding<=0:session.cause="Missed the aircraft"; finish(false)
 	var task: String
 	if tower:
 		task = "Use the marked lift" if completed.has(level) else Sector.JOBS[level]

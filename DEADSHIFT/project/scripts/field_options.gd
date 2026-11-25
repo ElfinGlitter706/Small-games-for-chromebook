@@ -11,6 +11,7 @@ var part_buttons:Array[Button]=[]
 var config := ConfigFile.new()
 var panel := PanelContainer.new()
 var tabs := TabContainer.new()
+var eggs:=Label.new()
 var record_text := Label.new()
 var fov := 78.
 var sensitivity := 1.
@@ -19,7 +20,7 @@ var capture_key := 0
 var capture_button: Button
 var bindings := {}
 var previous_mouse := Input.MOUSE_MODE_VISIBLE
-const KEYS := {KEY_W:"Forward",KEY_S:"Back",KEY_A:"Left",KEY_D:"Right",KEY_SHIFT:"Sprint",KEY_CTRL:"Crouch / slide",KEY_SPACE:"Jump",KEY_R:"Reload",KEY_F:"Melee",KEY_E:"Interact",KEY_Q:"Swap weapon"}
+const KEYS := {KEY_W:"Forward",KEY_S:"Back",KEY_A:"Left",KEY_D:"Right",KEY_SHIFT:"Sprint",KEY_CTRL:"Crouch / slide",KEY_SPACE:"Jump",KEY_R:"Reload",KEY_F:"Melee",KEY_E:"Interact",KEY_Q:"Swap weapon",KEY_P:"Performance display",KEY_G:"Use equipment / training gun",KEY_UP:"Look up",KEY_DOWN:"Look down",KEY_LEFT:"Look left",KEY_RIGHT:"Look right"}
 
 func build(parent) -> void:
 	game=parent
@@ -54,6 +55,18 @@ func build(parent) -> void:
 		part.pressed.connect(change_part.bind(i))
 	var records:=page("Run records")
 	records.add_child(record_text)
+	page("Discovered Easter Eggs").add_child(eggs)
+	var rules:=page("Challenges")
+	var hint:=Label.new()
+	hint.text="Applies on your next deployment. Each modifier adds 15% weapon XP."
+	rules.add_child(hint)
+	choice(rules,"Daily seed",["Off","Today’s challenge"],0)
+	for rule in game.session.RULES:choice(rules,rule,["Off","On"],0)
+	choice(controls,"Sprint toggle",["Hold","Toggle"],0)
+	choice(controls,"Crouch toggle",["Hold","Toggle"],0)
+	choice(display,"Critical marker",["Gold","Cyan","Pink"],0)
+	choice(display,"Subtitle size",["Standard","Large","Extra large"],0)
+	choice(audio,"Threat captions",["Off","On"],0)
 	choice(display,"Quality",["Auto","Low","Medium","High","Ultra"],0)
 	choice(display,"Window",["Windowed","Fullscreen"],0)
 	choice(display,"Resolution",["1280 × 720","1600 × 900","1920 × 1080"],0)
@@ -159,6 +172,7 @@ func apply_quality() -> void:
 		for sun in game.sector.find_children("*","DirectionalLight3D",false,false): sun.shadow_enabled=quality>1 and pref("Shadows",1)==1
 		for mat in game.sector.art.materials.values():
 			mat.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS if pref("Texture filter",1) else BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	game.ui.subtitle.add_theme_font_size_override("font_size",[19,24,29][pref("Subtitle size",0)])
 	for dot in game.ui.dots: dot.visible=pref("Crosshair",1)==1
 	AudioServer.set_bus_mute(0,pref("Master",4)==0)
 	AudioServer.set_bus_volume_db(0,linear_to_db(maxf(.001,pref("Master",4)*.25)))
@@ -209,6 +223,8 @@ func refresh_armory() -> void:
 	var equipped:Array=game.armory.equipped(key)
 	var progress:String="Max level" if rank==game.armory.STEPS.size() else "%d / %d XP" % [game.armory.xp(key)-game.armory.STEPS[rank-1],game.armory.STEPS[rank]-game.armory.STEPS[rank-1]]
 	armory_info.text="Level %d    ·    %s    ·    %d/%d attachments\nGun kills earn 20 XP, headshot kills earn 30 XP." % [rank,progress,equipped.size(),game.armory.slots(key)]
+	var task:Array=game.armory.TASKS[key]
+	armory_info.text+="\nGold finish   ·   %s   %d/%d" % [task[0],game.armory.data.get_value(key,"mastery",0),task[1]]
 	for i in part_buttons.size():
 		var selected:=i in equipped
 		var locked:bool=game.armory.UNLOCK[i]>rank
@@ -227,6 +243,12 @@ func show_panel() -> void:
 	if game.records.has_section_key("Vertigo","fastest"): lines.append("Fastest extraction: %ds" % int(game.records.get_value("Vertigo","fastest")))
 	lines.append("Challenges: survive wave 10  •  score 20 headshots  •  extract")
 	lines.append("Completed: "+str(game.records.get_value("medals","unlocked",[])))
+	var history:Array=game.records.get_value("runs","history",[])
+	if not history.is_empty():
+		lines.append("Recent runs")
+		lines.append_array(history)
+	var discovered:Array=game.records.get_value("discoveries","found",[])
+	eggs.text="No discoveries yet." if discovered.is_empty() else "\n\n".join(discovered)
 	record_text.text="\n\n".join(lines)
 	panel.show()
 	panel.move_to_front()

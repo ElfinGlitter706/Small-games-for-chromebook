@@ -7,6 +7,20 @@ const OLD_STEPS := [0,100,250,450,700,1000]
 const PARTS := ["Extended magazine","Speed loader","Stabilizer","Pulse core","Cycle tuner","Precision lens"]
 const UNLOCK := [2,2,3,4,5,6]
 const INFO := ["+25% magazine","20% faster reload","35% less kick","Extra hit power","12% faster fire","Deeper ADS zoom"]
+const TASKS := {"sidearm":["Headshot streak",3],"gun":["One magazine",8],"shotgun":["Close range",18],"smg":["One magazine",9],"lmg":["One magazine",16],"heavy":["Elite kills",8],"marksman":["Headshot streak",5],"relic":["Penetrations",10]}
+
+func mastered(key:String) -> bool:
+	return int(data.get_value(key,"mastery",0))>=int(TASKS[key][1])
+
+func advance(key:String,value:int,personal_best:=false) -> void:
+	var current:=int(data.get_value(key,"mastery",0))
+	var goal:int=TASKS[key][1]
+	if current>=goal:return
+	var next:=mini(goal,maxi(current,value) if personal_best else current+value)
+	if next!=current:
+		data.set_value(key,"mastery",next)
+		save()
+
 var data := ConfigFile.new()
 var testing := false
 

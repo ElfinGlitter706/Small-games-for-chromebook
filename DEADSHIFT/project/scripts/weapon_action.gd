@@ -20,6 +20,7 @@ func shoot(g, melee: bool) -> void:
 	var penetrating: bool = not melee and (scatter or g.specialty.get(g.loadout,"")=="arc")
 	var touched := false
 	var critical := false
+	var penetrated:=false
 	for i in pellets:
 		var direction := -aim.z
 		if i>0:
@@ -41,6 +42,7 @@ func shoot(g, melee: bool) -> void:
 		contacts.sort_custom(func(a,b): return a.distance<b.distance)
 		var limit := (3 if scatter and g.specialty.get(g.loadout,"")=="arc" else 2) if penetrating else 1
 		for j in mini(contacts.size(),limit):
+			if j>0:penetrated=true
 			var contact: Dictionary = contacts[j]
 			var zone: String = contact.zone
 			var hit_power: int = 2 if melee else g.WEAPONS[g.loadout].power + g.upgrades.get(g.loadout,0)
@@ -63,9 +65,14 @@ func shoot(g, melee: bool) -> void:
 		g.shots += 1
 		if touched: g.hits += 1
 		g.director.record_shot(g,critical)
+		if not g.session.practice:
+			g.mastery_streak=g.mastery_streak+1 if critical else 0
+			var task:String=g.armory.TASKS[g.loadout][0]
+			if task=="Headshot streak":g.armory.advance(g.loadout,g.mastery_streak,true)
+			if task=="Penetrations" and penetrated:g.armory.advance(g.loadout,1)
 	if touched:
 		g.hit=.18
-		g.ui.marker.modulate=Color.GOLD if critical else Color.WHITE
+		g.ui.marker.modulate=[Color.GOLD,Color.CYAN,Color.HOT_PINK][g.options.pref("Critical marker",0)] if critical else Color.WHITE
 		g.ui.marker.text="✦" if melee else "×"
 		g.sound.cue("slam" if melee else ("critical" if critical else "impact"),-13)
 	if g.queued==0 and g.enemies.is_empty() and g.intermission<=0: g.wave_clear()

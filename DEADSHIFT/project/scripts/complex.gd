@@ -33,6 +33,8 @@ var accessible := {}
 var room_names := {}
 var route: Array[Vector2i] = []
 var lift_pad := Vector3.ZERO
+var train:Node3D
+var platform:=Vector3.ZERO
 var landing_pad := Vector3.ZERO
 var rotor: Node3D
 var helicopter: Node3D
@@ -355,6 +357,7 @@ func place_equipment() -> void:
 	if tower and level>0: station("down","LIFT / DESCEND",0,shaft_position(0),"+94cfee")
 	var racks:Array = [["gun"],["sidearm","smg"],["heavy","shotgun"],["lmg"],["marksman"],["gun","heavy"]][level] if tower else ["sidearm","gun","heavy","smg","shotgun","marksman","lmg"]
 	for kind in racks: mount_rack(kind)
+	field_equipment()
 	for item in stations:
 		if item.kind not in ["up","down"]:continue
 		var p:Vector3=item.pos
@@ -363,6 +366,51 @@ func place_equipment() -> void:
 		for x in [-1.18,1.18]:
 			art.piece("pipe",p+Vector3(x,1.5,-.33),Vector3(.14,3,.14),"869395")
 			art.piece("box",p+Vector3(x,1.55,-.24),Vector3(.04,2.7,.045),"+84c1bb")
+
+func field_terminal(kind:String,title:String,index:int,pos:Vector3) -> Dictionary:
+	var center:=center_of(route[index])
+	var anchor:=center+pos
+	var best:=-INF
+	for dx in [0.,-1.,1.,-2.,2.]:
+		for dz in [0.,-1.,1.,-2.,2.]:
+			var candidate:=center+Vector3(clampf(pos.x+dx,-4.7,4.7),0,clampf(pos.z+dz,-4.7,4.7))
+			if not nav.clear_at(candidate,.60):continue
+			var gap:=5.
+			for other in stations:gap=minf(gap,candidate.distance_to(other.pos))
+			var score:=gap-.10*candidate.distance_to(center+pos)
+			if score>best:
+				best=score
+				anchor=candidate
+	art.piece("pipe",anchor+Vector3.UP*.42,Vector3(.20,.80,.20),"5f6e70")
+	art.piece("box",anchor+Vector3.UP*.9,Vector3(.64,.25,.49),"536c73",Vector3(-.24,0,0))
+	art.piece("box",anchor+Vector3.UP*1.04,Vector3(.42,.04,.31),"+8de1d4",Vector3(-.24,0,0))
+	var label:=art.signpost(title,anchor+Vector3.UP*1.5,24,"b5e6cf")
+	label.visibility_range_end=7
+	var item:={"kind":kind,"title":title,"price":0,"pos":anchor,"label":label}
+	stations.append(item)
+	return item
+
+func field_equipment() -> void:
+	field_terminal("medical","MEDKIT",1,Vector3(2,0,1))
+	field_terminal("plate","ARMOR PLATE",3,Vector3(-2,0,2))
+	field_terminal("beacon","PULSE BEACON",5,Vector3(2,0,-2))
+	if tower:return
+	field_terminal("dispatch","FREIGHT DISPATCH",8,Vector3(2,0,2))
+	field_terminal("battery","RELAY BATTERY",3,Vector3(-2,0,-2))
+	var door:=field_terminal("carriage","PLATFORM",8,Vector3(-2,0,-3))
+	platform=door.pos+Vector3(0,0,-1.7)
+	train=Node3D.new()
+	add_child(train)
+	train.position=platform-Vector3.BACK*12
+	art.piece("box",Vector3(0,.65,0),Vector3(6.5,.95,2.0),"495b64",Vector3.ZERO,train)
+	art.piece("box",Vector3(0,2.75,0),Vector3(6.7,.23,2.18),"657883",Vector3.ZERO,train)
+	for x in [-2.13,2.13]:
+		art.piece("box",Vector3(x,1.82,0),Vector3(2.12,1.8,1.95),"935839",Vector3.ZERO,train)
+		art.piece("box",Vector3(x,2.05,1.),Vector3(1.65,.72,.06),"+76acae",Vector3.ZERO,train)
+		for side in [-1.,1.]:art.piece("pipe",Vector3(x,.32,side*.85),Vector3(.72,.18,.72),"313c40",Vector3(PI/2,0,0),train)
+	art.piece("box",Vector3(0,.39,1.18),Vector3(1.48,.24,.94),"+91c7a4",Vector3.ZERO,train)
+	for z in [-.85,.85]:art.piece("box",platform+Vector3(0,.03,z),Vector3(10,.06,.09),"98a1a3")
+	train.hide()
 
 func furnish(c:Vector3,room:String,indoor:bool) -> void:
 	var p:=c+Vector3(-2.8,0,-2.65)

@@ -20,6 +20,36 @@ var plates := {}
 var plate_hp := {}
 var head_pivot := Node3D.new()
 
+static var portrait_mesh:ArrayMesh
+
+func wear_portrait() -> void:
+	if head_pivot.has_node("Portrait"):return
+	if not portrait_mesh:
+		var outline:=PackedVector2Array([Vector2(448,105),Vector2(536,56),Vector2(709,49),Vector2(861,145),Vector2(905,260),Vector2(866,368),Vector2(812,481),Vector2(722,562),Vector2(604,551),Vector2(501,478),Vector2(461,378),Vector2(394,287),Vector2(389,193)])
+		var vertices:=PackedVector3Array()
+		var uv:=PackedVector2Array()
+		for pt in outline:
+			vertices.append(Vector3((pt.x-650)*.00104,(324-pt.y)*.00104,0))
+			uv.append(pt/Vector2(1280,720))
+		var arrays:=[]
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX]=vertices
+		arrays[Mesh.ARRAY_TEX_UV]=uv
+		arrays[Mesh.ARRAY_INDEX]=Geometry2D.triangulate_polygon(outline)
+		portrait_mesh=ArrayMesh.new()
+		portrait_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+		var mat:=StandardMaterial3D.new()
+		mat.albedo_texture=preload("res://scripts/field_portrait.png")
+		mat.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+		mat.cull_mode=BaseMaterial3D.CULL_DISABLED
+		mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+		portrait_mesh.surface_set_material(0,mat)
+	var mask:=MeshInstance3D.new()
+	mask.name="Portrait"
+	mask.mesh=portrait_mesh
+	mask.position=Vector3(.02,.25,-.365)
+	head_pivot.add_child(mask)
+
 func armor(art) -> void:
 	for zone in ["head","torso"]:
 		var head: bool = zone=="head"
