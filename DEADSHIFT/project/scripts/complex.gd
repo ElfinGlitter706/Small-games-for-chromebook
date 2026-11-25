@@ -68,6 +68,7 @@ func build_floor(is_tower: bool, number: int, bought: Dictionary) -> void:
 		art.piece("box",Vector3(15,-4.1,10),Vector3(210,3,150),"635c50" if not tower else "424857")
 	var deck := ShaderMaterial.new()
 	deck.shader = preload("res://scripts/deck.gdshader")
+	deck.set_shader_parameter("lightweight",OS.has_feature("web"))
 	deck.set_shader_parameter("steel",Color(shade))
 	for i in route.size():
 		var cell: Vector2i = route[i]
@@ -155,7 +156,7 @@ func passage(a: int, b: int, pos: Vector3, across: Vector3, thickness: Vector3, 
 		cost = 450 + 150*floori(next/2.) + (75*level if tower else 0)
 	var id := "%d/%d/%d" % [level,first,next]
 	var opened := cost==0 or bought.has(id)
-	var gate := solid(pos+Vector3.UP*1.54,across*3.25+Vector3.UP*3.08+thickness,"76614b" if not shortcut else "426664")
+	var gate := solid(pos+Vector3.UP*1.54,across*3.25+Vector3.UP*3.08+thickness,"76614b" if not shortcut else "426664",true)
 	gate.visible = not opened
 	for y in [-.31,0.,.31]:
 		art.piece("box",Vector3(0,y,0),Vector3(1.035,.04,1.035),glow,Vector3.ZERO,gate)

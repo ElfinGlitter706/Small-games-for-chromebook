@@ -164,12 +164,20 @@ func survival() -> void:
 	if not use_kind("cache"):return
 	for i in 120:tick()
 	var result:String=g.offered
+	# Trade the starter pistol to keep the upgraded carbine for the ridge.
+	g.equip("sidearm",false)
 	g.interact()
 	verify(not result.is_empty() and g.loadout==result,"Cache claim failed")
+	g.equip("gun",false)
+	if g.reserve<30 and not use_kind("gun"):return
 	if not use_kind("lore") or not use_kind("lore_b") or not use_kind("secret"):return
 	verify(g.level==0 and g.loadout=="relic","Ground-level relay quest")
-	if not use_kind("lmg"):return
-	verify(g.loadout=="lmg","Wall-mounted LMG purchase")
+	if "lmg" in g.inventory:
+		if not visit_cell(g.sector.cell_at(station("lmg").pos)):return
+		g.equip("lmg",false)
+	else:
+		if not use_kind("lmg"):return
+	verify(g.loadout=="lmg","LMG available for wall ammo purchase")
 	# Discharge one round after the LMG motor reaches firing speed.
 	for frame in 80:
 		g.fire()
@@ -202,5 +210,3 @@ func run() -> void:
 	await create_timer(1.0).timeout
 	print("SIEGE RUN ",checks," checks, ",failures," failures")
 	quit(1 if failures else 0)
-
-

@@ -118,7 +118,7 @@ var supplies: Array[Dictionary] = []
 
 func _ready() -> void:
 	armory.testing=has_meta("test_run")
-	if not armory.testing: armory.data.load(armory.SAVE)
+	if not armory.testing: armory.load_progress()
 	records.load("user://deadshift_records.cfg")
 	add_child(preview_camera)
 	add_child(player)
@@ -387,6 +387,11 @@ func reload_duration() -> float:
 func capacity() -> int:
 	return ceili(WEAPONS[loadout].mag*(1.25 if 0 in fitted else 1.0))+4*upgrades.get(loadout,0)
 
+func show_play_floor() -> void:
+	if not OS.has_feature("web") or not tower: return
+	for floor_map in floors:
+		floor_map.visible=floor_map==sector or floor_map==floors[0]
+
 func riding() -> bool:
 	return lift_time>0 and lift_wait<=0
 
@@ -591,6 +596,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if state!="play": return
 	if intro>0 and event is InputEventMouseButton and event.pressed:
 		intro=0
+		show_play_floor()
 		camera.current=true
 		ui.transit.color.a=0
 		ui.intro_card.hide()
@@ -637,7 +643,9 @@ func _physics_process(delta: float) -> void:
 		else:
 			camera.current=true
 			ui.transit.color.a=1.0-smoothstep(1.14,1.66,elapsed)
-		if intro==0: ui.transit.color.a=0
+		if intro==0:
+			ui.transit.color.a=0
+			show_play_floor()
 	action.tick(delta)
 	director.update(delta)
 	sector.update_weather(delta,player.position,power)
@@ -845,6 +853,7 @@ func travel(to: int) -> void:
 	var descending := to<level
 	level=to
 	sector=floors[level]
+	show_play_floor()
 	choice={}
 	lift_ready=false
 	player.reparent(sector,false)

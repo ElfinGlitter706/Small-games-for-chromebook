@@ -1,6 +1,7 @@
 extends RefCounted
 ## Original modular low-poly scenery. Static pieces share geometry and draw calls.
 
+var building := true
 var shapes := {}
 var materials := {}
 var batches := {}
@@ -10,12 +11,12 @@ func _init(parent: Node3D) -> void:
 	root = parent
 	shapes["box"] = BoxMesh.new()
 	var ball := SphereMesh.new()
-	ball.radial_segments = 12
+	ball.radial_segments = 8 if OS.has_feature("web") else 12
 	ball.rings = 6
 	shapes["oval"] = ball
 	for key in ["pipe", "cone", "taper"]:
 		var tube := CylinderMesh.new()
-		tube.radial_segments = 12 if key != "cone" else 7
+		tube.radial_segments = 8 if OS.has_feature("web") else (12 if key != "cone" else 7)
 		tube.rings = 1
 		tube.height = 1
 		tube.top_radius = {"pipe":0.5, "cone":0.0, "taper":0.31}[key]
@@ -38,6 +39,8 @@ func piece(shape: String, pos: Vector3, size: Vector3, ink: String, rot := Vecto
 	var transform := Transform3D(Basis.from_euler(rot).scaled_local(size), pos)
 	if parent == null:
 		var key := shape + "/" + ink
+		if OS.has_feature("web") and pos.y<8 and size.length()<23:
+			key+="/%d,%d" % [floori(pos.x/24),floori(pos.z/24)]
 		if not batches.has(key): batches[key] = []
 		batches[key].append(transform)
 		return null
@@ -54,6 +57,7 @@ func beam(a: Vector3, b: Vector3, width: float, ink: String) -> void:
 	piece("pipe", (a+b)/2, Vector3(width, offset.length(), width), ink, rotation)
 
 func finish() -> void:
+	building=false
 	for key: String in batches:
 		var parts := key.split("/")
 		var mm := MultiMesh.new()

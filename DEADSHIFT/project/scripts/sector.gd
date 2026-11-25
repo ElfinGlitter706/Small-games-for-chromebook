@@ -38,7 +38,7 @@ func build(is_tower: bool) -> void:
 			solid(Vector3(12*side,1.6,edge*(depth+2)/2),Vector3(.45,3.2,depth-2),shade)
 			solid(Vector3(18*side,.64,edge*6),Vector3(12,1.28,.45),shade)
 		solid(Vector3(24*side,1.05,0),Vector3(.4,2.1,12),shade)
-		var gate := solid(Vector3(12*side,1.24,0),Vector3(.44,2.48,4),"93614a")
+		var gate := solid(Vector3(12*side,1.24,0),Vector3(.44,2.48,4),"93614a",true)
 		for j in 5:
 			art.piece("box",Vector3(0,j*.16-.32,0),Vector3(1.06,.035,.92),"e5ae62",Vector3.ZERO,gate)
 		gates.append({"kind":"gate","title":"OPEN "+("WEST" if side<0 else "EAST")+" ACCESS","pos":Vector3(12*side,0,0),"price":300,"mesh":gate,"open":false})
@@ -93,8 +93,13 @@ func build(is_tower: bool) -> void:
 	art.finish()
 	nav.rebuild()
 
-func solid(pos: Vector3, size: Vector3, ink: String) -> MeshInstance3D:
-	var mesh = art.piece("box",pos,size,ink,Vector3.ZERO,self)
+func solid(pos: Vector3, size: Vector3, ink: String, movable:=false) -> MeshInstance3D:
+	var mesh:MeshInstance3D
+	if OS.has_feature("web") and art.building and not movable:
+		art.piece("box",pos,size,ink)
+		mesh=MeshInstance3D.new()
+		add_child(mesh)
+	else: mesh=art.piece("box",pos,size,ink,Vector3.ZERO,self)
 	nav.add_obstacle(mesh,size,pos)
 	return mesh
 

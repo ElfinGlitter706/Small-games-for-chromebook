@@ -1,12 +1,28 @@
 extends RefCounted
 
 const SAVE := "user://weapon_armory.cfg"
-const STEPS := [0,100,250,450,700,1000]
+# Costs for levels 2–6 are 100, 250, 500, 850 and 1,300 XP.
+const STEPS := [0,100,350,850,1700,3000]
+const OLD_STEPS := [0,100,250,450,700,1000]
 const PARTS := ["Extended magazine","Speed loader","Stabilizer","Pulse core","Cycle tuner","Precision lens"]
 const UNLOCK := [2,2,3,4,5,6]
 const INFO := ["+25% magazine","20% faster reload","35% less kick","Extra hit power","12% faster fire","Deeper ADS zoom"]
 var data := ConfigFile.new()
 var testing := false
+
+func load_progress() -> void:
+	if data.load(SAVE)==OK: migrate_progress()
+
+func migrate_progress() -> void:
+	if data.get_value("profile","curve",1)>=2: return
+	for key in data.get_sections():
+		if not data.has_section_key(key,"xp"): continue
+		var earned:=xp(key)
+		var level:=0
+		for i in range(1,OLD_STEPS.size()):
+			if earned>=OLD_STEPS[i]: level=i
+		data.set_value(key,"xp",STEPS[level]+earned-OLD_STEPS[level])
+	save()
 
 func xp(key:String) -> int:
 	return maxi(0,int(data.get_value(key,"xp",0)))
@@ -43,4 +59,5 @@ func credit(key:String,amount:int) -> bool:
 	return rank(key)>before
 
 func save() -> void:
+	data.set_value("profile","curve",2)
 	if not testing and data.save(SAVE)!=OK: push_warning("Weapon progress could not be saved")

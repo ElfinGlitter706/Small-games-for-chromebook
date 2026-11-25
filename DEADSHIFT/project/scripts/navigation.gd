@@ -1,12 +1,22 @@
 extends RefCounted
 
 var obstacles: Array[Dictionary] = []
+var nearby_obstacles := {}
+const BUCKET := 6.0
 var grid := AStarGrid2D.new()
 var main_depth := 11.7
 var rooms := {}
 
 func add_obstacle(mesh: MeshInstance3D, size: Vector3, location: Vector3) -> void:
-	obstacles.append({"mesh": mesh, "bounds": AABB(location - size / 2, size)})
+	var bounds:=AABB(location-size/2,size)
+	var obstacle:={"mesh":mesh,"bounds":bounds}
+	obstacles.append(obstacle)
+	var margin:=bounds.grow(1.0)
+	for x in range(floori(margin.position.x/BUCKET),floori(margin.end.x/BUCKET)+1):
+		for z in range(floori(margin.position.z/BUCKET),floori(margin.end.z/BUCKET)+1):
+			var cell:=Vector2i(x,z)
+			if not nearby_obstacles.has(cell): nearby_obstacles[cell]=[]
+			nearby_obstacles[cell].append(obstacle)
 
 func clear_at(p: Vector3, radius: float = 0.4) -> bool:
 	var in_main := absf(p.x) < 11.7 - radius and absf(p.z) < main_depth - radius
@@ -14,7 +24,8 @@ func clear_at(p: Vector3, radius: float = 0.4) -> bool:
 	if not rooms.is_empty():
 		if not rooms.has(Vector2i(floori((p.x+6)/12),floori((p.z+6)/12))): return false
 	elif not in_main and not in_wing: return false
-	for obstacle in obstacles:
+	var cell:=Vector2i(floori(p.x/BUCKET),floori(p.z/BUCKET))
+	for obstacle in (nearby_obstacles.get(cell,[]) if radius<=1.0 else obstacles):
 		if not is_instance_valid(obstacle.mesh) or not obstacle.mesh.visible: continue
 		var box: AABB = obstacle.bounds
 		if p.x > box.position.x - radius and p.x < box.end.x + radius and p.z > box.position.z - radius and p.z < box.end.z + radius:

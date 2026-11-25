@@ -1,6 +1,10 @@
 extends CanvasLayer
 
 var game
+var sample_seconds:=0.0
+var sample_frames:=0
+var good_samples:=0
+var auto_resolution:=.65
 var weapon_list:=OptionButton.new()
 var armory_info:=Label.new()
 var part_buttons:Array[Button]=[]
@@ -119,6 +123,26 @@ func choice(parent: VBoxContainer,title: String,values: Array,initial: int) -> v
 			DisplayServer.window_set_size([Vector2i(1280,720),Vector2i(1600,900),Vector2i(1920,1080)][index])
 	)
 
+func _process(delta:float) -> void:
+	if not OS.has_feature("web") or pref("Quality",0)!=0 or game.state!="play": return
+	sample_seconds+=delta
+	sample_frames+=1
+	if sample_seconds<2.0:return
+	var rate:=sample_frames/sample_seconds
+	var target:=minf(60,maxi(1,Engine.max_fps)) if Engine.max_fps>0 else 60.0
+	sample_seconds=0
+	sample_frames=0
+	if rate<target*.78:
+		auto_resolution=maxf(.45,auto_resolution-.10)
+		good_samples=0
+	elif rate>=target*.94:
+		good_samples+=1
+		if good_samples>=3:
+			auto_resolution=minf(.75,auto_resolution+.05)
+			good_samples=0
+	else: good_samples=0
+	get_viewport().scaling_3d_scale=auto_resolution
+
 func apply_quality() -> void:
 	var quality:=pref("Quality",0)
 	if quality==0: quality=1 if OS.has_feature("web") else 3
@@ -129,7 +153,7 @@ func apply_quality() -> void:
 	if DisplayServer.get_name()!="headless" and not OS.has_feature("web"):
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if pref("VSync",1) else DisplayServer.VSYNC_DISABLED)
 	var viewport:=get_viewport()
-	viewport.scaling_3d_scale=[1.,.75,.9,1.,1.][quality]
+	viewport.scaling_3d_scale=auto_resolution if OS.has_feature("web") and pref("Quality",0)==0 else [1.,.75,.9,1.,1.][quality]
 	viewport.msaa_3d=Viewport.MSAA_2X if pref("Antialiasing",1) and quality>1 else Viewport.MSAA_DISABLED
 	if game.sector!=null:
 		for sun in game.sector.find_children("*","DirectionalLight3D",false,false): sun.shadow_enabled=quality>1 and pref("Shadows",1)==1
@@ -183,7 +207,7 @@ func refresh_armory() -> void:
 	var key:String=game.WEAPONS.keys()[weapon_list.selected]
 	var rank:int=game.armory.rank(key)
 	var equipped:Array=game.armory.equipped(key)
-	var progress:String="Max level" if rank==game.armory.STEPS.size() else "%d / %d XP" % [game.armory.xp(key),game.armory.STEPS[rank]]
+	var progress:String="Max level" if rank==game.armory.STEPS.size() else "%d / %d XP" % [game.armory.xp(key)-game.armory.STEPS[rank-1],game.armory.STEPS[rank]-game.armory.STEPS[rank-1]]
 	armory_info.text="Level %d    ·    %s    ·    %d/%d attachments\nGun kills earn 20 XP, headshot kills earn 30 XP." % [rank,progress,equipped.size(),game.armory.slots(key)]
 	for i in part_buttons.size():
 		var selected:=i in equipped
